@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>StockRecommender — Bargain Stock Screener</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:        #09090b;
+    --surface:   #111113;
+    --surface2:  #18181b;
+    --border:    #27272a;
+    --border2:   #3f3f46;
+    --accent:    #22d3ee;
+    --accent2:   #06b6d4;
+    --green:     #10b981;
+    --amber:     #f59e0b;
+    --red:       #ef4444;
+    --text:      #fafafa;
+    --muted:     #71717a;
+    --dim:       #3f3f46;
+    --radius:    12px;
+    --radius-sm: 8px;
+  }
+  html { font-size: 16px; scroll-behavior: smooth; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── Grid background ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--surface2) 1px, transparent 1px),
+      linear-gradient(90deg, var(--surface2) 1px, transparent 1px);
+    background-size: 40px 40px;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── Layout ── */
+  .wrapper { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 16px 80px; }
+
+  /* ── Header ── */
+  .header {
+    padding: 28px 0 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .logo { font-family: 'DM Serif Display', serif; font-size: clamp(1.6rem, 5vw, 2.2rem); color: var(--accent); letter-spacing: -1px; }
+  .logo span { color: var(--text); opacity: 0.7; }
+  .header-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: rgba(34,211,238,0.08);
+    border: 1px solid rgba(34,211,238,0.2);
+    padding: 4px 12px;
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+  /* ── Section labels ── */
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  /* ── Form card ── */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: clamp(16px, 4vw, 28px);
+    margin-bottom: 24px;
+  }
+
+  /* ── Sliders grid ── */
+  .sliders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+    gap: 20px 24px;
+    margin-bottom: 24px;
+  }
+
+  .slider-group { display: flex; flex-direction: column; gap: 8px; }
+
+  .slider-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .slider-label { font-size: 0.78rem; font-weight: 500; color: var(--text); }
+  .slider-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--accent);
+    min-width: 48px;
+    text-align: right;
+  }
+  .slider-hint { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+
+  /* ── Range input styling ── */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border2);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+    box-shadow: 0 0 0 2px rgba(34,211,238,0.3);
+    transition: box-shadow .15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { box-shadow: 0 0 0 4px rgba(34,211,238,0.25); }
+  input[type="range"]::-moz-range-thumb {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    border: 2px solid var(--bg);
+  }
+
+  /* ── Toggles row ── */
+  .toggles-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .toggle-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+    font-size: 0.75rem;
+    font-weight: 500;
+    user-select: none;
+  }
+  .toggle-chip input[type="checkbox"] { display: none; }
+  .toggle-chip .chip-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--border2);
+    transition: background .15s;
+    flex-shrink: 0;
+  }
+  .toggle-chip.active { border-color: var(--accent); background: rgba(34,211,238,0.06); }
+  .toggle-chip.active .chip-dot { background: var(--accent); }
+
+  /* ── Top N selector ── */
+  .top-n-row { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; flex-wrap: wrap; }
+  .top-n-label { font-size: 0.78rem; font-weight: 500; color: var(--text); }
+  .top-n-btns { display: flex; gap: 6px; }
+  .top-n-btn {
+    width: 36px; height: 36px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .top-n-btn.active {
+    border-color: var(--accent);
+    background: rgba(34,211,238,0.1);
+    color: var(--accent);
+  }
+
+  /* ── Submit button ── */
+  .btn-run {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #000;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    transition: all .2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .btn-run:hover:not(:disabled) { background: #67e8f9; transform: translateY(-1px); }
+  .btn-run:active:not(:disabled) { transform: translateY(0); }
+  .btn-run:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Progress ── */
+  .progress-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: none;
+  }
+  .progress-card.show { display: block; animation: fadeUp .3s ease; }
+  .progress-bar-wrap { background: var(--border); border-radius: 4px; height: 4px; overflow: hidden; margin: 10px 0 6px; }
+  .progress-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s ease; width: 0%; }
+  .progress-msg { font-size: 0.75rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+
+  /* ── Summary bar ── */
+  .summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .summary-chip {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    text-align: center;
+  }
+  .summary-chip .num {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--accent);
+  }
+  .summary-chip .num.green { color: var(--green); }
+  .summary-chip .num.amber { color: var(--amber); }
+  .summary-chip .lbl {
+    font-size: 0.58rem;
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+
+  /* ── Stock cards ── */
+  .results-grid { display: flex; flex-direction: column; gap: 16px; }
+
+  .stock-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: border-color .2s, transform .2s;
+    animation: fadeUp .4s ease both;
+  }
+  .stock-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
+
+  .card-topbar { height: 3px; }
+  .card-topbar.buy  { background: linear-gradient(90deg, var(--green), transparent); }
+  .card-topbar.hold { background: linear-gradient(90deg, var(--amber), transparent); }
+
+  .card-header {
+    padding: 16px 18px 12px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-ticker { font-family: 'IBM Plex Mono', monospace; font-size: 1.1rem; font-weight: 500; color: var(--accent); }
+  .card-company { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+  .card-sector { font-size: 0.65rem; color: var(--dim); margin-top: 1px; }
+
+  .card-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+  .verdict-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 20px;
+  }
+  .verdict-badge.buy  { background: rgba(16,185,129,.15); color: var(--green); border: 1px solid rgba(16,185,129,.3); }
+  .verdict-badge.hold { background: rgba(245,158,11,.12); color: var(--amber); border: 1px solid rgba(245,158,11,.25); }
+  .card-score { font-family: 'IBM Plex Mono', monospace; font-size: 0.65rem; color: var(--muted); }
+
+  /* ── Score bar ── */
+  .score-wrap { padding: 8px 18px 6px; }
+  .score-header { display: flex; justify-content: space-between; font-size: 0.6rem; font-family: 'IBM Plex Mono', monospace; color: var(--muted); margin-bottom: 4px; }
+  .score-bar { background: var(--border); border-radius: 3px; height: 4px; overflow: hidden; }
+  .score-fill { height: 100%; border-radius: 3px; transition: width .6s ease; }
+
+  /* ── Metrics tables ── */
+  .metrics-section { border-bottom: 1px solid var(--border); overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .metrics-table { width: 100%; border-collapse: collapse; min-width: 480px; }
+  .metrics-table td {
+    padding: 9px 10px;
+    text-align: center;
+    border-right: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .metrics-table td:last-child { border-right: none; }
+  .metric-lbl { font-size: 0.55rem; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 2px; }
+  .metric-val { font-size: 0.82rem; font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
+  .metric-val.green { color: var(--green); }
+  .metric-val.amber { color: var(--amber); }
+  .metric-val.muted { color: var(--muted); }
+
+  /* ── Quality chips ── */
+  .quality-chips { padding: 8px 18px 4px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .q-chip {
+    font-size: 0.62rem;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 10px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .q-chip.good { background: rgba(16,185,129,.1); color: var(--green); border: 1px solid rgba(16,185,129,.2); }
+  .q-chip.warn { background: rgba(245,158,11,.1); color: var(--amber); border: 1px solid rgba(245,158,11,.2); }
+
+  /* ── Analysis ── */
+  .analysis { padding: 10px 18px 16px; border-top: 1px solid var(--border); }
+  .analysis-label { font-size: 0.58rem; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 5px; display: flex; align-items: center; gap: 5px; }
+  .analysis-label::before { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  .analysis-text { font-size: 0.8rem; color: #a1a1aa; line-height: 1.65; }
+
+  /* ── Empty / error ── */
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); display: none; }
+  .empty.show { display: block; }
+  .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: .4; }
+
+  /* ── Disclaimer ── */
+  .disclaimer {
+    background: rgba(245,158,11,.06);
+    border: 1px solid rgba(245,158,11,.15);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 0.72rem;
+    color: #a16207;
+    margin-bottom: 20px;
+    line-height: 1.5;
+  }
+
+  /* ── Mobile tweaks ── */
+  @media (max-width: 480px) {
+    .header { padding: 20px 0 18px; }
+    .form-card { padding: 16px; }
+    .sliders-grid { grid-template-columns: 1fr; gap: 16px; }
+    .metrics-table { min-width: 420px; }
+    .card-header { flex-direction: column; }
+    .card-right { flex-direction: row; align-items: center; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">Stock<span>Recommender</span></div>
+    <div class="header-badge"><div class="dot"></div> Live Market Data</div>
+  </div>
+
+  <!-- Form -->
+  <div class="form-card">
+    <div class="section-label">Screening Criteria</div>
+
+    <div class="sliders-grid">
+      <!-- Max P/E -->
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Max P/E Ratio</span>
+          <span class="slider-value" id="val-pe">20x</span>
+        </div>
+        <input type="range" id="sl-pe" min="5" max="50" step="1" value="20"
+               oninput="document.getElementById('val-pe').textContent=this.value+'x'">
+        <span class="slider-hint">Price to earnings — lower = cheaper stock</span>
+      </div>
+
+      <!-- Min ROE -->
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Min ROE</span>
+          <span class="slider-value" id="val-roe">8%</span>
+        </div>
+        <input type="range" id="sl-roe" min="0" max="40" step="1" value="8"
+               oninput="document.getElementById('val-roe').textContent=this.value+'%'">
+        <span class="slider-hint">Return on equity — filters low-quality stocks</span>
+      </div>
+
+      <!-- Min Profit Margin -->
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Min Profit Margin</span>
+          <span class="slider-value" id="val-margin">3%</span>
+        </div>
+        <input type="range" id="sl-margin" min="0" max="30" step="1" value="3"
+               oninput="document.getElementById('val-margin').textContent=this.value+'%'">
+        <span class="slider-hint">Net income margin — ensures real profitability</span>
+      </div>
+
+      <!-- Max Debt/Equity -->
+      <div class="slider-group">
+        <div class="slider-header">
+          <span class="slider-label">Max Debt / Equity</span>
+          <span class="slider-value" id="val-de">150%</span>
+        </div>
+        <input type="range" id="sl-de" min="0" max="400" step="10" value="150"
+               oninput="document.getElementById('val-de').textContent=this.value+'%'">
+        <span class="slider-hint">Leverage filter — avoids overleveraged traps</span>
+      </div>
+    </div>
+
+    <!-- Optional filters -->
+    <div class="section-label">Optional Filters <span style="font-size:0.58rem;color:var(--muted);text-transform:none;letter-spacing:0;">(click to toggle on/off)</span></div>
+    <div class="toggles-row" id="toggles">
+      <div class="toggle-chip" id="chip-div" onclick="toggleChip('chip-div')">
+        <span class="chip-dot"></span> Dividend payers only
+      </div>
+      <div class="toggle-chip" id="chip-growth" onclick="toggleChip('chip-growth')">
+        <span class="chip-dot"></span> Positive EPS growth
+      </div>
+      <div class="toggle-chip" id="chip-analyst" onclick="toggleChip('chip-analyst')">
+        <span class="chip-dot"></span> Analyst upside &gt;= 10%
+      </div>
+    </div>
+
+    <!-- Top N -->
+    <div class="top-n-row">
+      <span class="top-n-label">Stocks in report</span>
+      <div class="top-n-btns" id="top-n-btns">
+        <button class="top-n-btn" onclick="setTopN(3)">3</button>
+        <button class="top-n-btn" onclick="setTopN(4)">4</button>
+        <button class="top-n-btn active" onclick="setTopN(6)">6</button>
+        <button class="top-n-btn" onclick="setTopN(8)">8</button>
+        <button class="top-n-btn" onclick="setTopN(10)">10</button>
+      </div>
+    </div>
+
+    <!-- Email -->
+    <div style="margin-bottom:18px;">
+      <div class="section-label">Email Results (optional)</div>
+      <div style="display:flex;gap:10px;align-items:stretch;flex-wrap:wrap;">
+        <input type="email" id="email-input" placeholder="you@example.com"
+               style="flex:1;min-width:200px;background:var(--surface2);border:1px solid var(--border);
+                      color:var(--text);padding:11px 14px;border-radius:var(--radius-sm);
+                      font-family:'DM Sans',sans-serif;font-size:0.875rem;outline:none;
+                      transition:border-color .15s;"
+               onfocus="this.style.borderColor='var(--accent2)'"
+               onblur="this.style.borderColor='var(--border)'">
+        <button class="btn-send" id="send-btn" onclick="sendEmail()" disabled
+                style="background:var(--surface2);color:var(--muted);border:1px solid var(--border);
+                       padding:11px 20px;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;
+                       font-size:0.875rem;font-weight:500;cursor:not-allowed;
+                       transition:all .2s;white-space:nowrap;display:flex;align-items:center;gap:6px;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M1 1l12 6-12 6V8.5l8-1.5-8-1.5V1z" fill="currentColor"/>
+          </svg>
+          Send Report
+        </button>
+      </div>
+      <div id="email-status" style="font-size:0.72rem;margin-top:6px;min-height:18px;
+           font-family:'IBM Plex Mono',monospace;"></div>
+    </div>
+
+    <button class="btn-run" id="run-btn" onclick="runScreen()">
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+        <circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M6 5l5 3-5 3V5z" fill="currentColor"/>
+      </svg>
+      Run Screen
+    </button>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-card" id="progress-card">
+    <div class="section-label">Scanning Market</div>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" id="progress-fill"></div>
+    </div>
+    <div class="progress-msg" id="progress-msg">Initializing...</div>
+  </div>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer" id="disclaimer" style="display:none">
+    <strong>Disclaimer:</strong> Data sourced live from Yahoo Finance. For informational and educational purposes only.
+    Not financial advice. Always verify data independently and consult a qualified professional before investing.
+  </div>
+
+  <!-- Summary -->
+  <div class="summary-row" id="summary-row" style="display:none">
+    <div class="summary-chip"><div class="num" id="s-total">0</div><div class="lbl">Stocks Found</div></div>
+    <div class="summary-chip"><div class="num green" id="s-buy">0</div><div class="lbl">BUY Signals</div></div>
+    <div class="summary-chip"><div class="num amber" id="s-hold">0</div><div class="lbl">HOLD / Watch</div></div>
+    <div class="summary-chip"><div class="num" id="s-pe">—</div><div class="lbl">Avg P/E</div></div>
+    <div class="summary-chip"><div class="num" id="s-scanned">—</div><div class="lbl">Tickers Scanned</div></div>
+  </div>
+
+  <!-- Results -->
+  <div class="results-grid" id="results-grid"></div>
+
+  <!-- Empty -->
+  <div class="empty" id="empty-state">
+    <div class="empty-icon">📉</div>
+    <p>No stocks matched your criteria.<br>Try relaxing the filters (higher P/E, lower ROE, etc.)</p>
+  </div>
+
+</div>
+
+<script>
+let topN = 6;
+let currentStocks = [];
+let currentParams = {};
+
+function setTopN(n) {
+  topN = n;
+  document.querySelectorAll('.top-n-btn').forEach(b => {
+    b.classList.toggle('active', parseInt(b.textContent) === n);
+  });
+}
+
+// Toggle chips — simple function called via onclick
+function toggleChip(id) {
+  const chip = document.getElementById(id);
+  chip.classList.toggle('active');
+}
+
+function fmt(val, prefix='', suffix='', fallback='—') {
+  if (val === null || val === undefined) return fallback;
+  return `${prefix}${val}${suffix}`;
+}
+
+function scoreColor(score) {
+  if (score >= 60) return 'var(--green)';
+  if (score >= 40) return 'var(--amber)';
+  return 'var(--red)';
+}
+
+function renderCard(s, idx) {
+  const isBuy    = s.verdict === 'BUY';
+  const topbar   = isBuy ? 'buy' : 'hold';
+  const score    = s.score || 0;
+  const scoreCol = scoreColor(score);
+
+  const roe    = s.roe    ? `${(s.roe*100).toFixed(0)}%`    : '—';
+  const margin = s.profit_margin ? `${(s.profit_margin*100).toFixed(0)}%` : '—';
+  const div    = s.dividend_yield ? `${s.dividend_yield.toFixed(2)}%` : '—';
+  const mcap   = s.market_cap_b ? `$${s.market_cap_b.toFixed(1)}B` : '—';
+  const up     = s.analyst_upside != null ? `+${s.analyst_upside.toFixed(1)}%` : '—';
+  const upColor= (s.analyst_upside||0) >= 15 ? 'green' : (s.analyst_upside||0) >= 0 ? '' : 'amber';
+  const de     = s.debt_to_equity != null ? `${s.debt_to_equity.toFixed(0)}%` : '—';
+  const eps    = s.eps_growth != null ? `${s.eps_growth > 0 ? '+':''}${s.eps_growth.toFixed(0)}%` : '—';
+  const epsCol = (s.eps_growth||0) >= 0 ? 'green' : 'amber';
+  const peCol  = s.pe_ratio <= 12 ? 'green' : s.pe_ratio <= 18 ? 'amber' : '';
+
+  // Quality chips
+  let chips = '';
+  if (s.roe)           chips += `<span class="q-chip ${s.roe>=0.15?'good':'warn'}">ROE ${roe}</span>`;
+  if (s.profit_margin) chips += `<span class="q-chip ${s.profit_margin>=0.05?'good':'warn'}">Margin ${margin}</span>`;
+  if (s.debt_to_equity!=null) chips += `<span class="q-chip ${s.debt_to_equity<=100?'good':'warn'}">D/E ${de}</span>`;
+  if (s.eps_growth!=null)     chips += `<span class="q-chip ${s.eps_growth>=0?'good':'warn'}">EPS ${eps}</span>`;
+
+  return `
+  <div class="stock-card" style="animation-delay:${idx*0.07}s">
+    <div class="card-topbar ${topbar}"></div>
+    <div class="card-header">
+      <div>
+        <div class="card-ticker">${s.ticker}</div>
+        <div class="card-company">${s.company}</div>
+        <div class="card-sector">${s.sector}</div>
+      </div>
+      <div class="card-right">
+        <span class="verdict-badge ${isBuy?'buy':'hold'}">${s.verdict}</span>
+        <span class="card-score">Score ${score}/100</span>
+      </div>
+    </div>
+
+    <div class="score-wrap">
+      <div class="score-header">
+        <span>Score</span><span style="color:${scoreCol};font-weight:500">${score}</span>
+      </div>
+      <div class="score-bar">
+        <div class="score-fill" style="width:${Math.min(score,100)}%;background:${scoreCol}"></div>
+      </div>
+    </div>
+
+    <div class="metrics-section">
+      <table class="metrics-table">
+        <tr>
+          <td><span class="metric-lbl">P/E</span><span class="metric-val ${peCol}">${s.pe_ratio}x</span></td>
+          <td><span class="metric-lbl">P/B</span><span class="metric-val">${fmt(s.pb_ratio,'','x')}</span></td>
+          <td><span class="metric-lbl">P/S</span><span class="metric-val">${fmt(s.ps_ratio,'','x')}</span></td>
+          <td><span class="metric-lbl">EV/EBITDA</span><span class="metric-val">${fmt(s.ev_ebitda,'','x')}</span></td>
+          <td><span class="metric-lbl">Price</span><span class="metric-val">$${s.price}</span></td>
+          <td><span class="metric-lbl">52W High</span><span class="metric-val muted">$${s.week52_high}</span></td>
+          <td><span class="metric-lbl">% off High</span><span class="metric-val green">-${s.pct_from_high}%</span></td>
+        </tr>
+      </table>
+    </div>
+    <div class="metrics-section">
+      <table class="metrics-table">
+        <tr>
+          <td><span class="metric-lbl">ROE</span><span class="metric-val">${roe}</span></td>
+          <td><span class="metric-lbl">Net Margin</span><span class="metric-val">${margin}</span></td>
+          <td><span class="metric-lbl">D/E</span><span class="metric-val">${de}</span></td>
+          <td><span class="metric-lbl">EPS Growth</span><span class="metric-val ${epsCol}">${eps}</span></td>
+          <td><span class="metric-lbl">Div Yield</span><span class="metric-val">${div}</span></td>
+          <td><span class="metric-lbl">Analyst Target</span><span class="metric-val ${upColor}">${fmt(s.analyst_target,'$')}</span></td>
+          <td><span class="metric-lbl">Upside</span><span class="metric-val ${upColor}">${up}</span></td>
+        </tr>
+      </table>
+    </div>
+
+    ${chips ? `<div class="quality-chips">${chips}</div>` : ''}
+
+    <div class="analysis">
+      <div class="analysis-label">AI Analysis</div>
+      <div class="analysis-text">${s.analysis || 'Analysis unavailable.'}</div>
+    </div>
+  </div>`;
+}
+
+async function runScreen() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:spin .8s linear infinite"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="10 6"/></svg> Scanning...';
+
+  document.getElementById('progress-card').classList.add('show');
+  document.getElementById('summary-row').style.display = 'none';
+  document.getElementById('disclaimer').style.display = 'none';
+  document.getElementById('results-grid').innerHTML = '';
+  document.getElementById('empty-state').classList.remove('show');
+
+  const params = new URLSearchParams({
+    max_pe:          document.getElementById('sl-pe').value,
+    min_roe:         document.getElementById('sl-roe').value,
+    min_margin:      document.getElementById('sl-margin').value,
+    max_de:          document.getElementById('sl-de').value,
+    top_n:           topN,
+    req_dividend:    document.getElementById('chip-div').classList.contains('active') ? '1' : '0',
+    req_eps_growth:  document.getElementById('chip-growth').classList.contains('active') ? '1' : '0',
+    req_analyst_up:  document.getElementById('chip-analyst').classList.contains('active') ? '1' : '0',
+  });
+
+  const es = new EventSource(`/screen?${params}`);
+
+  es.addEventListener('status', e => {
+    const d = JSON.parse(e.data);
+    document.getElementById('progress-msg').textContent = d.msg;
+  });
+
+  es.addEventListener('progress', e => {
+    const d = JSON.parse(e.data);
+    document.getElementById('progress-fill').style.width = d.pct + '%';
+    document.getElementById('progress-msg').textContent = d.msg;
+  });
+
+  es.addEventListener('results', e => {
+    es.close();
+    const d = JSON.parse(e.data);
+    const stocks = d.stocks || [];
+
+    document.getElementById('progress-card').classList.remove('show');
+
+    if (stocks.length === 0) {
+      document.getElementById('empty-state').classList.add('show');
+    } else {
+      const buys  = stocks.filter(s => s.verdict === 'BUY').length;
+      const holds = stocks.length - buys;
+      const avgPE = (stocks.reduce((a,s) => a + (s.pe_ratio||0), 0) / stocks.length).toFixed(1);
+
+      document.getElementById('s-total').textContent   = stocks.length;
+      document.getElementById('s-buy').textContent     = buys;
+      document.getElementById('s-hold').textContent    = holds;
+      document.getElementById('s-pe').textContent      = avgPE + 'x';
+      document.getElementById('s-scanned').textContent = d.total_scanned || '—';
+      document.getElementById('summary-row').style.display = 'grid';
+      document.getElementById('disclaimer').style.display = 'block';
+      document.getElementById('results-grid').innerHTML = stocks.map((s,i) => renderCard(s,i)).join('');
+    }
+
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6 5l5 3-5 3V5z" fill="currentColor"/></svg> Run Screen';
+  });
+
+  es.addEventListener('error', e => {
+    es.close();
+    let msg = 'An error occurred. Check the server logs.';
+    try { msg = JSON.parse(e.data).msg; } catch {}
+    document.getElementById('progress-msg').textContent = 'Error: ' + msg;
+    btn.disabled = false;
+    btn.innerHTML = 'Run Screen';
+  });
+
+  es.onerror = () => {
+    es.close();
+    document.getElementById('progress-msg').textContent = 'Connection lost. Try again.';
+    btn.disabled = false;
+    btn.innerHTML = 'Run Screen';
+  };
+}
+
+async function sendEmail() {
+  const email = document.getElementById('email-input').value.trim();
+  const status = document.getElementById('email-status');
+  const btn = document.getElementById('send-btn');
+
+  if (!email || !email.includes('@')) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'Please enter a valid email address.';
+    return;
+  }
+  if (!currentStocks.length) {
+    status.style.color = 'var(--amber)';
+    status.textContent = 'Run the screen first to generate results.';
+    return;
+  }
+
+  btn.disabled = true;
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Sending...';
+
+  try {
+    const res = await fetch('/send_email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, stocks: currentStocks, params: currentParams }),
+    });
+    const data = await res.json();
+    if (data.success) {
+      status.style.color = 'var(--green)';
+      status.textContent = '✓ ' + data.msg;
+    } else {
+      status.style.color = 'var(--red)';
+      status.textContent = '✗ ' + data.msg;
+    }
+  } catch(e) {
+    status.style.color = 'var(--red)';
+    status.textContent = 'Network error: ' + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// CSS keyframe for spinner
+const style = document.createElement('style');
+style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
