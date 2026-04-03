@@ -3,7 +3,7 @@ services:
     name: stockrecommender
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: python app.py
+    startCommand: gunicorn --worker-class gevent --workers 1 --timeout 120 app:app
     envVars:
       - key: ANTHROPIC_API_KEY
         sync: false
