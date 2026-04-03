@@ -664,73 +664,96 @@ async function runScreen() {
   document.getElementById('results-grid').innerHTML = '';
   document.getElementById('empty-state').classList.remove('show');
 
-  const params = new URLSearchParams({
+  const params = {
     max_pe:          document.getElementById('sl-pe').value,
     min_roe:         document.getElementById('sl-roe').value,
     min_margin:      document.getElementById('sl-margin').value,
     max_de:          document.getElementById('sl-de').value,
     top_n:           topN,
-    req_dividend:    document.getElementById('chip-div').classList.contains('active') ? '1' : '0',
-    req_eps_growth:  document.getElementById('chip-growth').classList.contains('active') ? '1' : '0',
-    req_analyst_up:  document.getElementById('chip-analyst').classList.contains('active') ? '1' : '0',
-  });
-
-  const es = new EventSource(`/screen?${params}`);
-
-  es.addEventListener('status', e => {
-    const d = JSON.parse(e.data);
-    document.getElementById('progress-msg').textContent = d.msg;
-  });
-
-  es.addEventListener('progress', e => {
-    const d = JSON.parse(e.data);
-    document.getElementById('progress-fill').style.width = d.pct + '%';
-    document.getElementById('progress-msg').textContent = d.msg;
-  });
-
-  es.addEventListener('results', e => {
-    es.close();
-    const d = JSON.parse(e.data);
-    const stocks = d.stocks || [];
-
-    document.getElementById('progress-card').classList.remove('show');
-
-    if (stocks.length === 0) {
-      document.getElementById('empty-state').classList.add('show');
-    } else {
-      const buys  = stocks.filter(s => s.verdict === 'BUY').length;
-      const holds = stocks.length - buys;
-      const avgPE = (stocks.reduce((a,s) => a + (s.pe_ratio||0), 0) / stocks.length).toFixed(1);
-
-      document.getElementById('s-total').textContent   = stocks.length;
-      document.getElementById('s-buy').textContent     = buys;
-      document.getElementById('s-hold').textContent    = holds;
-      document.getElementById('s-pe').textContent      = avgPE + 'x';
-      document.getElementById('s-scanned').textContent = d.total_scanned || '—';
-      document.getElementById('summary-row').style.display = 'grid';
-      document.getElementById('disclaimer').style.display = 'block';
-      document.getElementById('results-grid').innerHTML = stocks.map((s,i) => renderCard(s,i)).join('');
-    }
-
-    btn.disabled = false;
-    btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6 5l5 3-5 3V5z" fill="currentColor"/></svg> Run Screen';
-  });
-
-  es.addEventListener('error', e => {
-    es.close();
-    let msg = 'An error occurred. Check the server logs.';
-    try { msg = JSON.parse(e.data).msg; } catch {}
-    document.getElementById('progress-msg').textContent = 'Error: ' + msg;
-    btn.disabled = false;
-    btn.innerHTML = 'Run Screen';
-  });
-
-  es.onerror = () => {
-    es.close();
-    document.getElementById('progress-msg').textContent = 'Connection lost. Try again.';
-    btn.disabled = false;
-    btn.innerHTML = 'Run Screen';
+    req_dividend:    document.getElementById('chip-div').classList.contains('active'),
+    req_eps_growth:  document.getElementById('chip-growth').classList.contains('active'),
+    req_analyst_up:  document.getElementById('chip-analyst').classList.contains('active'),
   };
+
+  // Start the job
+  let jobId;
+  try {
+    const res = await fetch('/start_screen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(params),
+    });
+    const data = await res.json();
+    jobId = data.job_id;
+  } catch(e) {
+    document.getElementById('progress-msg').textContent = 'Failed to start: ' + e.message;
+    btn.disabled = false;
+    btn.innerHTML = 'Run Screen';
+    return;
+  }
+
+  // Poll every 2 seconds
+  const pollInterval = setInterval(async () => {
+    try {
+      const res  = await fetch(`/poll/${jobId}`);
+      const data = await res.json();
+
+      document.getElementById('progress-fill').style.width = (data.pct || 0) + '%';
+      document.getElementById('progress-msg').textContent  = data.msg || '';
+
+      if (data.status === 'done') {
+        clearInterval(pollInterval);
+        const d      = data.result || {};
+        const stocks = d.stocks || [];
+
+        document.getElementById('progress-card').classList.remove('show');
+
+        if (stocks.length === 0) {
+          document.getElementById('empty-state').classList.add('show');
+        } else {
+          currentStocks = stocks;
+          currentParams = {
+            max_pe:     parseFloat(params.max_pe),
+            min_roe:    parseFloat(params.min_roe) / 100,
+            min_margin: parseFloat(params.min_margin) / 100,
+            max_de:     parseFloat(params.max_de),
+            top_n:      topN,
+          };
+          const buys  = stocks.filter(s => s.verdict === 'BUY').length;
+          const holds = stocks.length - buys;
+          const avgPE = (stocks.reduce((a,s) => a + (s.pe_ratio||0), 0) / stocks.length).toFixed(1);
+          document.getElementById('s-total').textContent   = stocks.length;
+          document.getElementById('s-buy').textContent     = buys;
+          document.getElementById('s-hold').textContent    = holds;
+          document.getElementById('s-pe').textContent      = avgPE + 'x';
+          document.getElementById('s-scanned').textContent = d.total_scanned || '--';
+          document.getElementById('summary-row').style.display = 'grid';
+          document.getElementById('disclaimer').style.display  = 'block';
+          document.getElementById('results-grid').innerHTML = stocks.map((s,i) => renderCard(s,i)).join('');
+          // Enable send button
+          const sendBtn = document.getElementById('send-btn');
+          sendBtn.disabled = false;
+          sendBtn.style.color = 'var(--accent)';
+          sendBtn.style.borderColor = 'var(--accent)';
+          sendBtn.style.cursor = 'pointer';
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6 5l5 3-5 3V5z" fill="currentColor"/></svg> Run Screen';
+      }
+
+      if (data.status === 'error') {
+        clearInterval(pollInterval);
+        document.getElementById('progress-msg').textContent = 'Error: ' + data.msg;
+        btn.disabled = false;
+        btn.innerHTML = 'Run Screen';
+      }
+    } catch(e) {
+      clearInterval(pollInterval);
+      document.getElementById('progress-msg').textContent = 'Connection error. Please try again.';
+      btn.disabled = false;
+      btn.innerHTML = 'Run Screen';
+    }
+  }, 2000);
 }
 
 async function sendEmail() {
