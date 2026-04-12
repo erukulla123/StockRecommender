@@ -362,6 +362,40 @@
   .empty.show { display: block; }
   .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: .4; }
 
+  /* ── Tabs ── */
+  .tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+  .tab-btn {
+    flex: 1; padding: 11px 16px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem; font-weight: 500; cursor: pointer;
+    transition: all .2s; display: flex; align-items: center;
+    justify-content: center; gap: 8px;
+  }
+  .tab-btn.active-buy  { border-color: var(--green); background: rgba(16,185,129,.1); color: var(--green); }
+  .tab-btn.active-sell { border-color: var(--red);   background: rgba(239,68,68,.1);  color: var(--red); }
+  .tab-count {
+    font-family: 'IBM Plex Mono', monospace; font-size: 0.7rem;
+    font-weight: 600; padding: 1px 7px; border-radius: 10px;
+    background: var(--border);
+  }
+  .tab-btn.active-buy  .tab-count { background: rgba(16,185,129,.2); color: var(--green); }
+  .tab-btn.active-sell .tab-count { background: rgba(239,68,68,.2);  color: var(--red); }
+
+  /* ── SELL card overrides ── */
+  .card-topbar.sell { background: linear-gradient(90deg, var(--red), transparent); }
+  .card-topbar.watch { background: linear-gradient(90deg, var(--amber), transparent); }
+  .verdict-badge.sell  { background: rgba(239,68,68,.15); color: var(--red);   border: 1px solid rgba(239,68,68,.3); }
+  .verdict-badge.watch { background: rgba(245,158,11,.12); color: var(--amber); border: 1px solid rgba(245,158,11,.25); }
+  .sentiment-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.62rem; font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500; padding: 2px 8px; border-radius: 10px; margin-top: 3px;
+  }
+  .sent-positive { background: rgba(16,185,129,.1); color: var(--green); }
+  .sent-negative { background: rgba(239,68,68,.1);  color: var(--red); }
+  .sent-neutral  { background: rgba(113,113,122,.1); color: var(--muted); }
+
   /* ── Disclaimer ── */
   .disclaimer {
     background: rgba(245,158,11,.06);
@@ -522,28 +556,47 @@
 
   <!-- Summary -->
   <div class="summary-row" id="summary-row" style="display:none">
-    <div class="summary-chip"><div class="num" id="s-total">0</div><div class="lbl">Stocks Found</div></div>
-    <div class="summary-chip"><div class="num green" id="s-buy">0</div><div class="lbl">BUY Signals</div></div>
-    <div class="summary-chip"><div class="num amber" id="s-hold">0</div><div class="lbl">HOLD / Watch</div></div>
-    <div class="summary-chip"><div class="num" id="s-pe">—</div><div class="lbl">Avg P/E</div></div>
+    <div class="summary-chip"><div class="num green" id="s-buy">0</div><div class="lbl">BUY Picks</div></div>
+    <div class="summary-chip"><div class="num" style="color:var(--red)" id="s-sell">0</div><div class="lbl">SELL Alerts</div></div>
     <div class="summary-chip"><div class="num" id="s-scanned">—</div><div class="lbl">Tickers Scanned</div></div>
   </div>
 
-  <!-- Results -->
-  <div class="results-grid" id="results-grid"></div>
+  <!-- Tabs -->
+  <div class="tabs" id="result-tabs" style="display:none">
+    <button class="tab-btn active-buy" id="tab-buy" onclick="switchTab('buy')">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M6.5 1v11M1 6.5h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      BUY Recommendations
+      <span class="tab-count" id="tab-buy-count">0</span>
+    </button>
+    <button class="tab-btn" id="tab-sell" onclick="switchTab('sell')">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+        <path d="M1 6.5h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      SELL Alerts
+      <span class="tab-count" id="tab-sell-count">0</span>
+    </button>
+  </div>
+
+  <!-- Results grids -->
+  <div class="results-grid" id="results-buy"></div>
+  <div class="results-grid" id="results-sell" style="display:none"></div>
 
   <!-- Empty -->
   <div class="empty" id="empty-state">
     <div class="empty-icon">📉</div>
-    <p>No stocks matched your criteria.<br>Try relaxing the filters (higher P/E, lower ROE, etc.)</p>
+    <p>No stocks matched your criteria.<br>Try relaxing the filters.</p>
   </div>
 
 </div>
 
 <script>
 let topN = 6;
-let currentStocks = [];
-let currentParams = {};
+let currentBuyStocks  = [];
+let currentSellStocks = [];
+let currentParams     = {};
+let activeTab         = 'buy';
 
 function setTopN(n) {
   topN = n;
@@ -552,102 +605,101 @@ function setTopN(n) {
   });
 }
 
-// Toggle chips — simple function called via onclick
 function toggleChip(id) {
-  const chip = document.getElementById(id);
-  chip.classList.toggle('active');
+  document.getElementById(id).classList.toggle('active');
 }
 
-function fmt(val, prefix='', suffix='', fallback='—') {
+function switchTab(tab) {
+  activeTab = tab;
+  const buyBtn  = document.getElementById('tab-buy');
+  const sellBtn = document.getElementById('tab-sell');
+  const buyGrid  = document.getElementById('results-buy');
+  const sellGrid = document.getElementById('results-sell');
+  buyBtn.className  = 'tab-btn' + (tab === 'buy'  ? ' active-buy'  : '');
+  sellBtn.className = 'tab-btn' + (tab === 'sell' ? ' active-sell' : '');
+  buyGrid.style.display  = tab === 'buy'  ? 'flex' : 'none';
+  sellGrid.style.display = tab === 'sell' ? 'flex' : 'none';
+}
+
+function fmt(val, prefix='', suffix='', fallback='--') {
   if (val === null || val === undefined) return fallback;
   return `${prefix}${val}${suffix}`;
 }
 
-function scoreColor(score) {
-  if (score >= 60) return 'var(--green)';
-  if (score >= 40) return 'var(--amber)';
-  return 'var(--red)';
-}
+function renderCard(s, idx, mode='buy') {
+  const isBuy     = mode === 'buy';
+  const verdict   = s.verdict || (isBuy ? 'BUY' : 'SELL');
+  const sentiment = s.news_sentiment || 'neutral';
+  const score     = isBuy ? (s.buy_score || 0) : (s.sell_risk || 0);
 
-function renderCard(s, idx) {
-  const isBuy    = s.verdict === 'BUY';
-  const topbar   = isBuy ? 'buy' : 'hold';
-  const score    = s.score || 0;
-  const scoreCol = scoreColor(score);
+  const verdictClass = verdict.toLowerCase();
+  const topbarClass  = verdict === 'BUY' ? 'buy' : verdict === 'SELL' ? 'sell' : verdict === 'HOLD' ? 'hold' : 'watch';
+  const scoreCol = isBuy
+    ? (score >= 60 ? 'var(--green)' : score >= 40 ? 'var(--amber)' : 'var(--red)')
+    : (score >= 60 ? 'var(--red)'   : score >= 40 ? 'var(--amber)' : 'var(--muted)');
+  const scoreLbl = isBuy ? 'Buy Score' : 'Risk Score';
 
-  const roe    = s.roe    ? `${(s.roe*100).toFixed(0)}%`    : '—';
-  const margin = s.profit_margin ? `${(s.profit_margin*100).toFixed(0)}%` : '—';
-  const div    = s.dividend_yield ? `${s.dividend_yield.toFixed(2)}%` : '—';
-  const mcap   = s.market_cap_b ? `$${s.market_cap_b.toFixed(1)}B` : '—';
-  const up     = s.analyst_upside != null ? `+${s.analyst_upside.toFixed(1)}%` : '—';
-  const upColor= (s.analyst_upside||0) >= 15 ? 'green' : (s.analyst_upside||0) >= 0 ? '' : 'amber';
-  const de     = s.debt_to_equity != null ? `${s.debt_to_equity.toFixed(0)}%` : '—';
-  const eps    = s.eps_growth != null ? `${s.eps_growth > 0 ? '+':''}${s.eps_growth.toFixed(0)}%` : '—';
-  const epsCol = (s.eps_growth||0) >= 0 ? 'green' : 'amber';
-  const peCol  = s.pe_ratio <= 12 ? 'green' : s.pe_ratio <= 18 ? 'amber' : '';
+  const sentClass = sentiment === 'positive' ? 'sent-positive' : sentiment === 'negative' ? 'sent-negative' : 'sent-neutral';
+  const sentIcon  = sentiment === 'positive' ? '+' : sentiment === 'negative' ? '-' : '~';
 
-  // Quality chips
-  let chips = '';
-  if (s.roe)           chips += `<span class="q-chip ${s.roe>=0.15?'good':'warn'}">ROE ${roe}</span>`;
-  if (s.profit_margin) chips += `<span class="q-chip ${s.profit_margin>=0.05?'good':'warn'}">Margin ${margin}</span>`;
-  if (s.debt_to_equity!=null) chips += `<span class="q-chip ${s.debt_to_equity<=100?'good':'warn'}">D/E ${de}</span>`;
-  if (s.eps_growth!=null)     chips += `<span class="q-chip ${s.eps_growth>=0?'good':'warn'}">EPS ${eps}</span>`;
+  const roe    = s.roe    ? `${(s.roe*100).toFixed(0)}%`           : '--';
+  const margin = s.profit_margin ? `${(s.profit_margin*100).toFixed(0)}%` : '--';
+  const div    = s.dividend_yield ? `${s.dividend_yield.toFixed(2)}%`     : '--';
+  const up     = s.analyst_upside != null ? `${s.analyst_upside >= 0 ? '+' : ''}${s.analyst_upside.toFixed(1)}%` : '--';
+  const upCol  = (s.analyst_upside||0) >= 10 ? 'var(--green)' : (s.analyst_upside||0) < 0 ? 'var(--red)' : 'var(--text)';
+  const eps    = s.eps_growth != null ? `${s.eps_growth >= 0 ? '+' : ''}${s.eps_growth.toFixed(0)}%` : '--';
+  const epsCol = (s.eps_growth||0) >= 0 ? 'var(--green)' : 'var(--red)';
+  const peCol  = isBuy ? (s.pe_ratio <= 12 ? 'var(--green)' : s.pe_ratio <= 18 ? 'var(--amber)' : 'var(--text)')
+                       : (s.pe_ratio > 40  ? 'var(--red)'   : s.pe_ratio > 25  ? 'var(--amber)' : 'var(--text)');
+  const offHighCol = isBuy ? 'var(--green)' : 'var(--red)';
 
   return `
   <div class="stock-card" style="animation-delay:${idx*0.07}s">
-    <div class="card-topbar ${topbar}"></div>
+    <div class="card-topbar ${topbarClass}"></div>
     <div class="card-header">
       <div>
         <div class="card-ticker">${s.ticker}</div>
         <div class="card-company">${s.company}</div>
         <div class="card-sector">${s.sector}</div>
+        <span class="sentiment-badge ${sentClass}">${sentIcon} News: ${sentiment.charAt(0).toUpperCase()+sentiment.slice(1)}</span>
       </div>
       <div class="card-right">
-        <span class="verdict-badge ${isBuy?'buy':'hold'}">${s.verdict}</span>
-        <span class="card-score">Score ${score}/100</span>
+        <span class="verdict-badge ${verdictClass}">${verdict}</span>
+        <span class="card-score">${scoreLbl} <strong style="color:${scoreCol}">${score}</strong>/100</span>
       </div>
     </div>
-
     <div class="score-wrap">
       <div class="score-header">
-        <span>Score</span><span style="color:${scoreCol};font-weight:500">${score}</span>
+        <span>${scoreLbl}</span><span style="color:${scoreCol};font-weight:500">${score}</span>
       </div>
       <div class="score-bar">
         <div class="score-fill" style="width:${Math.min(score,100)}%;background:${scoreCol}"></div>
       </div>
     </div>
-
     <div class="metrics-section">
-      <table class="metrics-table">
-        <tr>
-          <td><span class="metric-lbl">P/E</span><span class="metric-val ${peCol}">${s.pe_ratio}x</span></td>
-          <td><span class="metric-lbl">P/B</span><span class="metric-val">${fmt(s.pb_ratio,'','x')}</span></td>
-          <td><span class="metric-lbl">P/S</span><span class="metric-val">${fmt(s.ps_ratio,'','x')}</span></td>
-          <td><span class="metric-lbl">EV/EBITDA</span><span class="metric-val">${fmt(s.ev_ebitda,'','x')}</span></td>
-          <td><span class="metric-lbl">Price</span><span class="metric-val">$${s.price}</span></td>
-          <td><span class="metric-lbl">52W High</span><span class="metric-val muted">$${s.week52_high}</span></td>
-          <td><span class="metric-lbl">% off High</span><span class="metric-val green">-${s.pct_from_high}%</span></td>
-        </tr>
-      </table>
+      <table class="metrics-table"><tr>
+        <td><span class="metric-lbl">P/E</span><span class="metric-val" style="color:${peCol}">${fmt(s.pe_ratio,'','x')}</span></td>
+        <td><span class="metric-lbl">P/B</span><span class="metric-val">${fmt(s.pb_ratio,'','x')}</span></td>
+        <td><span class="metric-lbl">P/S</span><span class="metric-val">${fmt(s.ps_ratio,'','x')}</span></td>
+        <td><span class="metric-lbl">EV/EBITDA</span><span class="metric-val">${fmt(s.ev_ebitda,'','x')}</span></td>
+        <td><span class="metric-lbl">Price</span><span class="metric-val">$${s.price}</span></td>
+        <td><span class="metric-lbl">52W High</span><span class="metric-val muted">$${s.week52_high}</span></td>
+        <td><span class="metric-lbl">% off High</span><span class="metric-val" style="color:${offHighCol}">-${s.pct_from_high}%</span></td>
+      </tr></table>
     </div>
     <div class="metrics-section">
-      <table class="metrics-table">
-        <tr>
-          <td><span class="metric-lbl">ROE</span><span class="metric-val">${roe}</span></td>
-          <td><span class="metric-lbl">Net Margin</span><span class="metric-val">${margin}</span></td>
-          <td><span class="metric-lbl">D/E</span><span class="metric-val">${de}</span></td>
-          <td><span class="metric-lbl">EPS Growth</span><span class="metric-val ${epsCol}">${eps}</span></td>
-          <td><span class="metric-lbl">Div Yield</span><span class="metric-val">${div}</span></td>
-          <td><span class="metric-lbl">Analyst Target</span><span class="metric-val ${upColor}">${fmt(s.analyst_target,'$')}</span></td>
-          <td><span class="metric-lbl">Upside</span><span class="metric-val ${upColor}">${up}</span></td>
-        </tr>
-      </table>
+      <table class="metrics-table"><tr>
+        <td><span class="metric-lbl">ROE</span><span class="metric-val">${roe}</span></td>
+        <td><span class="metric-lbl">Net Margin</span><span class="metric-val">${margin}</span></td>
+        <td><span class="metric-lbl">D/E</span><span class="metric-val">${s.debt_to_equity != null ? s.debt_to_equity+'%' : '--'}</span></td>
+        <td><span class="metric-lbl">EPS Growth</span><span class="metric-val" style="color:${epsCol}">${eps}</span></td>
+        <td><span class="metric-lbl">Div Yield</span><span class="metric-val">${div}</span></td>
+        <td><span class="metric-lbl">Analyst Target</span><span class="metric-val" style="color:${upCol}">${fmt(s.analyst_target,'$')}</span></td>
+        <td><span class="metric-lbl">Upside</span><span class="metric-val" style="color:${upCol}">${up}</span></td>
+      </tr></table>
     </div>
-
-    ${chips ? `<div class="quality-chips">${chips}</div>` : ''}
-
     <div class="analysis">
-      <div class="analysis-label">AI Analysis</div>
+      <div class="analysis-label">AI Analysis + News Sentiment</div>
       <div class="analysis-text">${s.analysis || 'Analysis unavailable.'}</div>
     </div>
   </div>`;
@@ -659,77 +711,74 @@ async function runScreen() {
   btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:spin .8s linear infinite"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="10 6"/></svg> Scanning...';
 
   document.getElementById('progress-card').classList.add('show');
-  document.getElementById('summary-row').style.display = 'none';
-  document.getElementById('disclaimer').style.display = 'none';
-  document.getElementById('results-grid').innerHTML = '';
+  document.getElementById('summary-row').style.display  = 'none';
+  document.getElementById('result-tabs').style.display  = 'none';
+  document.getElementById('disclaimer').style.display   = 'none';
+  document.getElementById('results-buy').innerHTML      = '';
+  document.getElementById('results-sell').innerHTML     = '';
   document.getElementById('empty-state').classList.remove('show');
 
   const params = {
-    max_pe:          document.getElementById('sl-pe').value,
-    min_roe:         document.getElementById('sl-roe').value,
-    min_margin:      document.getElementById('sl-margin').value,
-    max_de:          document.getElementById('sl-de').value,
-    top_n:           topN,
-    req_dividend:    document.getElementById('chip-div').classList.contains('active'),
-    req_eps_growth:  document.getElementById('chip-growth').classList.contains('active'),
-    req_analyst_up:  document.getElementById('chip-analyst').classList.contains('active'),
+    max_pe:         document.getElementById('sl-pe').value,
+    min_roe:        document.getElementById('sl-roe').value,
+    min_margin:     document.getElementById('sl-margin').value,
+    max_de:         document.getElementById('sl-de').value,
+    top_n:          topN,
+    req_dividend:   document.getElementById('chip-div').classList.contains('active'),
+    req_eps_growth: document.getElementById('chip-growth').classList.contains('active'),
+    req_analyst_up: document.getElementById('chip-analyst').classList.contains('active'),
   };
 
-  // Start the job
   let jobId;
   try {
-    const res = await fetch('/start_screen', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(params),
+    const res  = await fetch('/start_screen', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(params)
     });
-    const data = await res.json();
-    jobId = data.job_id;
+    jobId = (await res.json()).job_id;
   } catch(e) {
     document.getElementById('progress-msg').textContent = 'Failed to start: ' + e.message;
-    btn.disabled = false;
-    btn.innerHTML = 'Run Screen';
-    return;
+    btn.disabled = false; btn.innerHTML = 'Run Screen'; return;
   }
 
-  // Poll every 2 seconds
   const pollInterval = setInterval(async () => {
     try {
-      const res  = await fetch(`/poll/${jobId}`);
-      const data = await res.json();
-
+      const data = await (await fetch(`/poll/${jobId}`)).json();
       document.getElementById('progress-fill').style.width = (data.pct || 0) + '%';
       document.getElementById('progress-msg').textContent  = data.msg || '';
 
       if (data.status === 'done') {
         clearInterval(pollInterval);
-        const d      = data.result || {};
-        const stocks = d.stocks || [];
+        const d          = data.result || {};
+        const buyStocks  = d.buy_stocks  || [];
+        const sellStocks = d.sell_stocks || [];
+
+        currentBuyStocks  = buyStocks;
+        currentSellStocks = sellStocks;
+        currentParams     = {
+          max_pe:     parseFloat(params.max_pe),
+          min_roe:    parseFloat(params.min_roe) / 100,
+          min_margin: parseFloat(params.min_margin) / 100,
+          max_de:     parseFloat(params.max_de),
+          top_n:      topN,
+        };
 
         document.getElementById('progress-card').classList.remove('show');
 
-        if (stocks.length === 0) {
+        if (!buyStocks.length && !sellStocks.length) {
           document.getElementById('empty-state').classList.add('show');
         } else {
-          currentStocks = stocks;
-          currentParams = {
-            max_pe:     parseFloat(params.max_pe),
-            min_roe:    parseFloat(params.min_roe) / 100,
-            min_margin: parseFloat(params.min_margin) / 100,
-            max_de:     parseFloat(params.max_de),
-            top_n:      topN,
-          };
-          const buys  = stocks.filter(s => s.verdict === 'BUY').length;
-          const holds = stocks.length - buys;
-          const avgPE = (stocks.reduce((a,s) => a + (s.pe_ratio||0), 0) / stocks.length).toFixed(1);
-          document.getElementById('s-total').textContent   = stocks.length;
-          document.getElementById('s-buy').textContent     = buys;
-          document.getElementById('s-hold').textContent    = holds;
-          document.getElementById('s-pe').textContent      = avgPE + 'x';
+          document.getElementById('s-buy').textContent     = buyStocks.length;
+          document.getElementById('s-sell').textContent    = sellStocks.length;
           document.getElementById('s-scanned').textContent = d.total_scanned || '--';
+          document.getElementById('tab-buy-count').textContent  = buyStocks.length;
+          document.getElementById('tab-sell-count').textContent = sellStocks.length;
           document.getElementById('summary-row').style.display = 'grid';
+          document.getElementById('result-tabs').style.display = 'flex';
           document.getElementById('disclaimer').style.display  = 'block';
-          document.getElementById('results-grid').innerHTML = stocks.map((s,i) => renderCard(s,i)).join('');
+          document.getElementById('results-buy').innerHTML  = buyStocks.map((s,i)  => renderCard(s,i,'buy')).join('');
+          document.getElementById('results-sell').innerHTML = sellStocks.map((s,i) => renderCard(s,i,'sell')).join('');
+          switchTab('buy');
+
           // Enable send button
           const sendBtn = document.getElementById('send-btn');
           sendBtn.disabled = false;
@@ -740,65 +789,43 @@ async function runScreen() {
         btn.disabled = false;
         btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M6 5l5 3-5 3V5z" fill="currentColor"/></svg> Run Screen';
       }
-
       if (data.status === 'error') {
         clearInterval(pollInterval);
         document.getElementById('progress-msg').textContent = 'Error: ' + data.msg;
-        btn.disabled = false;
-        btn.innerHTML = 'Run Screen';
+        btn.disabled = false; btn.innerHTML = 'Run Screen';
       }
     } catch(e) {
       clearInterval(pollInterval);
       document.getElementById('progress-msg').textContent = 'Connection error. Please try again.';
-      btn.disabled = false;
-      btn.innerHTML = 'Run Screen';
+      btn.disabled = false; btn.innerHTML = 'Run Screen';
     }
   }, 2000);
 }
 
 async function sendEmail() {
-  const email = document.getElementById('email-input').value.trim();
+  const email  = document.getElementById('email-input').value.trim();
   const status = document.getElementById('email-status');
-  const btn = document.getElementById('send-btn');
-
+  const btn    = document.getElementById('send-btn');
   if (!email || !email.includes('@')) {
-    status.style.color = 'var(--red)';
-    status.textContent = 'Please enter a valid email address.';
-    return;
+    status.style.color = 'var(--red)'; status.textContent = 'Please enter a valid email address.'; return;
   }
-  if (!currentStocks.length) {
-    status.style.color = 'var(--amber)';
-    status.textContent = 'Run the screen first to generate results.';
-    return;
+  if (!currentBuyStocks.length && !currentSellStocks.length) {
+    status.style.color = 'var(--amber)'; status.textContent = 'Run the screen first.'; return;
   }
-
-  btn.disabled = true;
-  status.style.color = 'var(--muted)';
-  status.textContent = 'Sending...';
-
+  btn.disabled = true; status.style.color = 'var(--muted)'; status.textContent = 'Sending...';
   try {
-    const res = await fetch('/send_email', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, stocks: currentStocks, params: currentParams }),
+    const res  = await fetch('/send_email', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, buy_stocks: currentBuyStocks, sell_stocks: currentSellStocks, params: currentParams }),
     });
     const data = await res.json();
-    if (data.success) {
-      status.style.color = 'var(--green)';
-      status.textContent = '✓ ' + data.msg;
-    } else {
-      status.style.color = 'var(--red)';
-      status.textContent = '✗ ' + data.msg;
-    }
+    status.style.color = data.success ? 'var(--green)' : 'var(--red)';
+    status.textContent = (data.success ? 'Sent! ' : 'Error: ') + data.msg;
   } catch(e) {
-    status.style.color = 'var(--red)';
-    status.textContent = 'Network error: ' + e.message;
-  } finally {
-    btn.disabled = false;
-  }
+    status.style.color = 'var(--red)'; status.textContent = 'Network error: ' + e.message;
+  } finally { btn.disabled = false; }
 }
 
-// CSS keyframe for spinner
 const style = document.createElement('style');
 style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
 document.head.appendChild(style);
