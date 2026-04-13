@@ -9,11 +9,28 @@ import os, re, sys, json, ssl, smtplib, logging, threading, uuid
 from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask_login import login_required, current_user
+from auth import db, login_manager, auth as auth_blueprint, User
 import yfinance as yf
 import anthropic
 
 app = Flask(__name__)
+
+# Auth + database config
+app.config["SECRET_KEY"]                  = os.getenv("SECRET_KEY", "change-me-in-production")
+app.config["SQLALCHEMY_DATABASE_URI"]     = os.getenv("DATABASE_URL", "sqlite:///stockrecommender.db")
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+db.init_app(app)
+login_manager.init_app(app)
+login_manager.login_view    = "auth_blueprint.login"
+login_manager.login_message = "Please sign in to use StockRecommender."
+app.register_blueprint(auth_blueprint)
+
+with app.app_context():
+    db.create_all()
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
                     handlers=[logging.StreamHandler(sys.stdout)])
 log = logging.getLogger(__name__)
@@ -490,12 +507,20 @@ def send_report_email(to_email, buy_stocks, sell_stocks, params):
 # ─── Routes ───────────────────────────────────────────────────────────────────
 
 @app.route("/")
+@login_required
 def index():
-    return render_template("index.html")
+    return render_template("index.html",
+                           user_email=current_user.email,
+                           user_plan=current_user.plan,
+                           scans_today=current_user.scans_today)
 
 
 @app.route("/start_screen", methods=["POST"])
+@login_required
 def start_screen():
+    if not current_user.can_scan():
+        return jsonify({"error": "Daily scan limit reached. Upgrade to Pro for unlimited scans."}), 429
+    current_user.record_scan()
     data = request.get_json()
     params = {
         "max_pe":         float(data.get("max_pe",     20)),
@@ -514,6 +539,7 @@ def start_screen():
 
 
 @app.route("/poll/<job_id>")
+@login_required
 def poll(job_id):
     job = jobs.get(job_id)
     if not job:
@@ -522,6 +548,7 @@ def poll(job_id):
 
 
 @app.route("/send_email", methods=["POST"])
+@login_required
 def send_email_route():
     data       = request.get_json()
     to_email   = (data.get("email") or "").strip()

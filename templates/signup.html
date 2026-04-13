@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sign Up — StockRecommender</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #09090b;
+    color: #fafafa;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .card {
+    background: #111113;
+    border: 1px solid #27272a;
+    border-radius: 14px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 400px;
+  }
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.6rem;
+    color: #22d3ee;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+  .logo span { color: #a1a1aa; }
+  .subtitle { text-align: center; font-size: 0.82rem; color: #71717a; margin-bottom: 28px; }
+  .flash {
+    padding: 10px 14px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 18px;
+    background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #fca5a5;
+  }
+  .field { margin-bottom: 16px; }
+  .field label { display: block; font-size: 0.75rem; font-weight: 500; color: #a1a1aa; margin-bottom: 6px; }
+  .field input {
+    width: 100%; background: #18181b; border: 1px solid #27272a;
+    color: #fafafa; padding: 11px 14px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem; outline: none; transition: border-color .15s;
+  }
+  .field input:focus { border-color: #22d3ee; }
+  .btn {
+    width: 100%; padding: 12px; background: #22d3ee; color: #000; border: none;
+    border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+    font-weight: 600; cursor: pointer; margin-top: 8px; transition: background .2s;
+  }
+  .btn:hover { background: #67e8f9; }
+  .perks {
+    background: rgba(34,211,238,.05); border: 1px solid rgba(34,211,238,.15);
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 22px;
+  }
+  .perks-title { font-size: 0.72rem; font-weight: 600; color: #22d3ee; margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+  .perk { font-size: 0.78rem; color: #a1a1aa; padding: 3px 0; display: flex; align-items: center; gap: 8px; }
+  .perk::before { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: #22d3ee; flex-shrink: 0; }
+  .footer { text-align: center; font-size: 0.78rem; color: #71717a; margin-top: 20px; }
+  .footer a { color: #22d3ee; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
+  .hint { font-size: 0.68rem; color: #52525b; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">Stock<span>Recommender</span></div>
+  <div class="subtitle">Create your free account</div>
+
+  <div class="perks">
+    <div class="perks-title">Free plan includes</div>
+    <div class="perk">1 market scan per day</div>
+    <div class="perk">BUY + SELL recommendations</div>
+    <div class="perk">AI news sentiment analysis</div>
+    <div class="perk">Email results to yourself</div>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for category, message in messages %}
+      <div class="flash">{{ message }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('auth.signup') }}">
+    <div class="field">
+      <label>Email address</label>
+      <input type="email" name="email" placeholder="you@example.com" required autofocus>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" name="password" placeholder="Min. 8 characters" required minlength="8">
+      <div class="hint">At least 8 characters</div>
+    </div>
+    <button type="submit" class="btn">Create free account</button>
+  </form>
+
+  <div class="footer">
+    Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a>
+  </div>
+</div>
+</body>
+</html>

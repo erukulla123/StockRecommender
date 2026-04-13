@@ -426,6 +426,26 @@
   <div class="header">
     <div class="logo">Stock<span>Recommender</span></div>
     <div class="header-badge"><div class="dot"></div> Live Market Data</div>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      {% if user_plan == 'pro' %}
+        <span style="font-size:0.62rem;font-family:'IBM Plex Mono',monospace;font-weight:600;
+                     letter-spacing:0.1em;padding:3px 10px;border-radius:20px;
+                     background:rgba(16,185,129,.15);color:var(--green);
+                     border:1px solid rgba(16,185,129,.3);">PRO</span>
+      {% else %}
+        <span style="font-size:0.65rem;color:var(--muted);">
+          {{ scans_today }}/1 scans today
+        </span>
+      {% endif %}
+      <span style="font-size:0.72rem;color:var(--muted);">{{ user_email }}</span>
+      <a href="/logout" style="font-size:0.72rem;color:var(--muted);text-decoration:none;
+                               padding:5px 12px;border:1px solid var(--border);border-radius:6px;
+                               transition:all .15s;"
+         onmouseover="this.style.color='var(--text)';this.style.borderColor='var(--border2)'"
+         onmouseout="this.style.color='var(--muted)';this.style.borderColor='var(--border)'">
+        Sign out
+      </a>
+    </div>
   </div>
 
   <!-- Form -->
