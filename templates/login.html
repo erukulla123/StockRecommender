@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login — StockRecommender</title>
+<title>Sign In — StockRecommender</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -33,72 +33,53 @@
     margin-bottom: 6px;
   }
   .logo span { color: #a1a1aa; }
-  .subtitle {
-    text-align: center;
-    font-size: 0.82rem;
-    color: #71717a;
-    margin-bottom: 28px;
+  .subtitle { text-align: center; font-size: 0.82rem; color: #71717a; margin-bottom: 28px; }
+  .flash-error {
+    padding: 10px 14px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 18px;
+    background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.25); color: #fca5a5;
   }
-  .flash {
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 0.8rem;
-    margin-bottom: 18px;
-    background: rgba(239,68,68,.1);
-    border: 1px solid rgba(239,68,68,.25);
-    color: #fca5a5;
+  .flash-success {
+    padding: 10px 14px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 18px;
+    background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25); color: #6ee7b7;
   }
   .field { margin-bottom: 16px; }
-  .field label {
-    display: block;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #a1a1aa;
-    margin-bottom: 6px;
-  }
+  .field-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+  .field label { font-size: 0.75rem; font-weight: 500; color: #a1a1aa; }
+  .field-hint { font-size: 0.72rem; color: #22d3ee; text-decoration: none; }
+  .field-hint:hover { text-decoration: underline; }
   .field input {
-    width: 100%;
-    background: #18181b;
-    border: 1px solid #27272a;
-    color: #fafafa;
-    padding: 11px 14px;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.9rem;
-    outline: none;
-    transition: border-color .15s;
+    width: 100%; background: #18181b; border: 1px solid #27272a;
+    color: #fafafa; padding: 11px 14px; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.9rem;
+    outline: none; transition: border-color .15s;
   }
   .field input:focus { border-color: #22d3ee; }
   .btn {
-    width: 100%;
-    padding: 12px;
-    background: #22d3ee;
-    color: #000;
-    border: none;
-    border-radius: 8px;
-    font-family: 'DM Sans', sans-serif;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 8px;
-    transition: background .2s;
+    width: 100%; padding: 12px; background: #22d3ee; color: #000; border: none;
+    border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 0.95rem;
+    font-weight: 600; cursor: pointer; margin-top: 8px; transition: background .2s;
   }
   .btn:hover { background: #67e8f9; }
-  .footer {
-    text-align: center;
-    font-size: 0.78rem;
-    color: #71717a;
-    margin-top: 20px;
-  }
-  .footer a { color: #22d3ee; text-decoration: none; }
-  .footer a:hover { text-decoration: underline; }
   .divider {
     display: flex; align-items: center; gap: 10px;
     color: #3f3f46; font-size: 0.72rem; margin: 20px 0;
   }
-  .divider::before, .divider::after {
-    content: ''; flex: 1; height: 1px; background: #27272a;
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: #27272a; }
+  .btn-guest {
+    width: 100%; padding: 11px; background: transparent; color: #a1a1aa;
+    border: 1px solid #27272a; border-radius: 8px;
+    font-family: 'DM Sans', sans-serif; font-size: 0.88rem;
+    font-weight: 500; cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    text-decoration: none;
   }
+  .btn-guest:hover { border-color: #3f3f46; color: #fafafa; background: #18181b; }
+  .guest-note {
+    font-size: 0.68rem; color: #52525b; text-align: center; margin-top: 8px;
+  }
+  .footer { text-align: center; font-size: 0.78rem; color: #71717a; margin-top: 22px; }
+  .footer a { color: #22d3ee; text-decoration: none; }
+  .footer a:hover { text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -108,7 +89,7 @@
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% for category, message in messages %}
-      <div class="flash">{{ message }}</div>
+      <div class="flash-{{ category }}">{{ message }}</div>
     {% endfor %}
   {% endwith %}
 
@@ -118,11 +99,25 @@
       <input type="email" name="email" placeholder="you@example.com" required autofocus>
     </div>
     <div class="field">
-      <label>Password</label>
+      <div class="field-header">
+        <label>Password</label>
+        <a href="{{ url_for('auth.forgot_password') }}" class="field-hint">Forgot password?</a>
+      </div>
       <input type="password" name="password" placeholder="Your password" required>
     </div>
     <button type="submit" class="btn">Sign in</button>
   </form>
+
+  <div class="divider">or</div>
+
+  <a href="{{ url_for('auth.guest') }}" class="btn-guest">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="5" r="3" stroke="currentColor" stroke-width="1.4"/>
+      <path d="M2 14c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+    </svg>
+    Continue as guest
+  </a>
+  <div class="guest-note">1 free scan, no account needed</div>
 
   <div class="footer">
     Don't have an account? <a href="{{ url_for('auth.signup') }}">Sign up free</a>
