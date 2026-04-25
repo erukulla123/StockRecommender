@@ -408,6 +408,31 @@
     line-height: 1.5;
   }
 
+  /* ── Price range ── */
+  .price-range-row {
+    display: flex; gap: 12px; align-items: flex-end; margin-bottom: 20px; flex-wrap: wrap;
+  }
+  .price-input-group { display: flex; flex-direction: column; gap: 6px; flex: 1; min-width: 120px; }
+  .price-input-group label { font-size: 0.75rem; font-weight: 500; color: var(--text); }
+  .price-input-wrap {
+    position: relative; display: flex; align-items: center;
+  }
+  .price-input-wrap span {
+    position: absolute; left: 12px; font-size: 0.85rem; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; pointer-events: none;
+  }
+  .price-input-wrap input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text); padding: 10px 12px 10px 24px;
+    border-radius: var(--radius-sm); font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.88rem; outline: none; transition: border-color .15s;
+  }
+  .price-input-wrap input:focus { border-color: var(--accent2); }
+  .price-separator {
+    font-size: 0.75rem; color: var(--muted); padding-bottom: 10px; flex-shrink: 0;
+  }
+  .price-hint { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
+
   /* ── Mobile tweaks ── */
   @media (max-width: 480px) {
     .header { padding: 20px 0 18px; }
@@ -496,6 +521,29 @@
                oninput="document.getElementById('val-de').textContent=this.value+'%'">
         <span class="slider-hint">Leverage filter — avoids overleveraged traps</span>
       </div>
+    </div>
+
+    <!-- Price Range -->
+    <div class="section-label">Stock Price Range (USD)</div>
+    <div class="price-range-row">
+      <div class="price-input-group">
+        <label>Min Price</label>
+        <div class="price-input-wrap">
+          <span>$</span>
+          <input type="number" id="price-min" value="0" min="0" max="99999" step="1" placeholder="0">
+        </div>
+      </div>
+      <div class="price-separator">to</div>
+      <div class="price-input-group">
+        <label>Max Price</label>
+        <div class="price-input-wrap">
+          <span>$</span>
+          <input type="number" id="price-max" value="500" min="1" max="99999" step="1" placeholder="500">
+        </div>
+      </div>
+    </div>
+    <div class="price-hint" style="margin-top:-14px;margin-bottom:18px;">
+      Only show stocks trading within this price range &nbsp;·&nbsp; Set max to 99999 for no upper limit
     </div>
 
     <!-- Optional filters -->
@@ -738,12 +786,16 @@ async function runScreen() {
   document.getElementById('results-sell').innerHTML     = '';
   document.getElementById('empty-state').classList.remove('show');
 
+  const priceMin = parseFloat(document.getElementById('price-min').value) || 0;
+  const priceMax = parseFloat(document.getElementById('price-max').value) || 99999;
   const params = {
     max_pe:         document.getElementById('sl-pe').value,
     min_roe:        document.getElementById('sl-roe').value,
     min_margin:     document.getElementById('sl-margin').value,
     max_de:         document.getElementById('sl-de').value,
     top_n:          topN,
+    price_min:      priceMin,
+    price_max:      priceMax,
     req_dividend:   document.getElementById('chip-div').classList.contains('active'),
     req_eps_growth: document.getElementById('chip-growth').classList.contains('active'),
     req_analyst_up: document.getElementById('chip-analyst').classList.contains('active'),
@@ -780,6 +832,8 @@ async function runScreen() {
           min_margin: parseFloat(params.min_margin) / 100,
           max_de:     parseFloat(params.max_de),
           top_n:      topN,
+          price_min:  priceMin,
+          price_max:  priceMax,
         };
 
         document.getElementById('progress-card').classList.remove('show');

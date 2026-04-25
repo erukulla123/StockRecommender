@@ -111,23 +111,30 @@ def passes_buy_filters(info, pe, params):
     roe    = info.get("returnOnEquity")
     margin = info.get("profitMargins")
     de     = info.get("debtToEquity")
+    price  = info.get("currentPrice") or info.get("regularMarketPrice") or 0
     if pe <= 0 or pe > params["max_pe"]:          return False
     if roe    is not None and roe    < params["min_roe"]:    return False
     if margin is not None and margin < params["min_margin"]: return False
     if de     is not None and de     > params["max_de"]:     return False
+    # Price range filter
+    if price < params.get("price_min", 0):   return False
+    if price > params.get("price_max", 99999): return False
     if params.get("req_dividend") and (info.get("dividendYield") or 0) <= 0: return False
     if params.get("req_eps_growth"):
         eps_g = info.get("earningsGrowth")
         if eps_g is not None and eps_g < 0: return False
     if params.get("req_analyst_up"):
         target = info.get("targetMeanPrice")
-        price  = info.get("currentPrice") or info.get("regularMarketPrice")
         if target and price and (target - price) / price * 100 < 10: return False
     return True
 
 
-def qualifies_for_sell(info, pe):
+def qualifies_for_sell(info, pe, params=None):
     """Stock must show at least 2 deterioration signals to be a SELL candidate."""
+    if params:
+        price = info.get("currentPrice") or info.get("regularMarketPrice") or 0
+        if price < params.get("price_min", 0):    return False
+        if price > params.get("price_max", 99999): return False
     signals = 0
     if pe and pe > 25:                                    signals += 1
     eps_g = info.get("earningsGrowth")
@@ -331,7 +338,7 @@ def run_screener_job(job_id, params):
                     buy_candidates.append(stock)
 
                 # SELL check (separate — same stock can appear in both if fundamentals are mixed)
-                elif qualifies_for_sell(info, pe):
+                elif qualifies_for_sell(info, pe, params):
                     stock["sell_risk"] = score_sell_risk(stock)
                     sell_candidates.append(stock)
 
@@ -528,6 +535,8 @@ def start_screen():
         "min_margin":     float(data.get("min_margin",  3)) / 100,
         "max_de":         float(data.get("max_de",    150)),
         "top_n":          int(data.get("top_n",         6)),
+        "price_min":      float(data.get("price_min",    0)),
+        "price_max":      float(data.get("price_max", 99999)),
         "req_dividend":   bool(data.get("req_dividend",   False)),
         "req_eps_growth": bool(data.get("req_eps_growth", False)),
         "req_analyst_up": bool(data.get("req_analyst_up", False)),
