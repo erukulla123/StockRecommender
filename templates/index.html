@@ -433,6 +433,63 @@
   }
   .price-hint { font-size: 0.62rem; color: var(--muted); margin-top: 2px; }
 
+  /* ── Data sources panel ── */
+  .sources-toggle {
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 18px; cursor: pointer;
+    border-top: 1px solid var(--border);
+    font-size: 0.68rem; font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted); user-select: none;
+    transition: color .15s;
+  }
+  .sources-toggle:hover { color: var(--text); }
+  .sources-toggle svg { transition: transform .2s; flex-shrink: 0; }
+  .sources-toggle.open svg { transform: rotate(180deg); }
+  .sources-panel {
+    display: none; padding: 0 18px 14px;
+    border-top: 1px solid var(--border);
+    animation: fadeUp .2s ease;
+  }
+  .sources-panel.open { display: block; }
+  .sources-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 8px; margin-top: 10px;
+  }
+  .source-item {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+  }
+  .source-metric {
+    font-size: 0.65rem; font-family: 'IBM Plex Mono', monospace;
+    font-weight: 500; color: var(--accent); letter-spacing: 0.05em;
+    margin-bottom: 2px;
+  }
+  .source-origin {
+    font-size: 0.72rem; color: var(--text); margin-bottom: 1px;
+  }
+  .source-detail {
+    font-size: 0.65rem; color: var(--muted); line-height: 1.4;
+  }
+  .source-badge {
+    display: inline-block; font-size: 0.58rem; font-weight: 500;
+    padding: 1px 6px; border-radius: 8px; margin-top: 4px;
+    letter-spacing: 0.05em;
+  }
+  .sb-yf  { background: rgba(99,102,241,.12); color: #818cf8; border: 1px solid rgba(99,102,241,.2); }
+  .sb-ai  { background: rgba(34,211,238,.1);  color: var(--accent); border: 1px solid rgba(34,211,238,.2); }
+  .sb-calc { background: rgba(16,185,129,.1); color: var(--green); border: 1px solid rgba(16,185,129,.2); }
+  .sources-footer {
+    font-size: 0.65rem; color: var(--muted); margin-top: 10px;
+    padding-top: 8px; border-top: 1px solid var(--border);
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  }
+  .sources-footer a { color: var(--accent); text-decoration: none; }
+  .sources-footer a:hover { text-decoration: underline; }
+
   /* ── Mobile tweaks ── */
   @media (max-width: 480px) {
     .header { padding: 20px 0 18px; }
@@ -770,7 +827,88 @@ function renderCard(s, idx, mode='buy') {
       <div class="analysis-label">AI Analysis + News Sentiment</div>
       <div class="analysis-text">${s.analysis || 'Analysis unavailable.'}</div>
     </div>
+
+    <!-- Sources toggle -->
+    <div class="sources-toggle" id="src-toggle-${s.ticker}-${idx}"
+         onclick="toggleSources('${s.ticker}', ${idx})">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Data sources &amp; methodology
+    </div>
+
+    <!-- Sources panel -->
+    <div class="sources-panel" id="src-panel-${s.ticker}-${idx}">
+      <div class="sources-grid">
+        <div class="source-item">
+          <div class="source-metric">Price · 52W High/Low</div>
+          <div class="source-origin">Yahoo Finance</div>
+          <div class="source-detail">Real-time quote via yfinance API. Refreshed on each scan.</div>
+          <span class="source-badge sb-yf">Yahoo Finance</span>
+        </div>
+        <div class="source-item">
+          <div class="source-metric">P/E · P/B · P/S · EV/EBITDA</div>
+          <div class="source-origin">Yahoo Finance</div>
+          <div class="source-detail">Trailing 12-month ratios from quarterly filings. Updated after each earnings release.</div>
+          <span class="source-badge sb-yf">Yahoo Finance</span>
+        </div>
+        <div class="source-item">
+          <div class="source-metric">ROE · Net Margin · D/E</div>
+          <div class="source-origin">Yahoo Finance</div>
+          <div class="source-detail">Derived from most recent annual/quarterly balance sheet and income statement.</div>
+          <span class="source-badge sb-yf">Yahoo Finance</span>
+        </div>
+        <div class="source-item">
+          <div class="source-metric">EPS Growth</div>
+          <div class="source-origin">Yahoo Finance</div>
+          <div class="source-detail">Year-over-year earnings per share growth from trailing 12-month reports.</div>
+          <span class="source-badge sb-yf">Yahoo Finance</span>
+        </div>
+        <div class="source-item">
+          <div class="source-metric">Analyst Target · Upside</div>
+          <div class="source-origin">Yahoo Finance</div>
+          <div class="source-detail">Consensus mean price target from Wall Street analysts covering this stock.</div>
+          <span class="source-badge sb-yf">Yahoo Finance</span>
+        </div>
+        <div class="source-item">
+          <div class="source-metric">% off 52W High</div>
+          <div class="source-origin">Calculated</div>
+          <div class="source-detail">Formula: (52W High - Current Price) / 52W High × 100. Used as primary bargain signal.</div>
+          <span class="source-badge sb-calc">Calculated</span>
+        </div>
+        <div class="source-item">
+          <div class="source-metric">${isBuy ? 'Buy Score' : 'Risk Score'}</div>
+          <div class="source-origin">StockRecommender algorithm</div>
+          <div class="source-detail">${isBuy
+            ? 'Weighted score: 52W discount (25pts) + Analyst upside (20pts) + ROE (15pts) + P/E cheapness (15pts) + Margin (10pts) + P/B (10pts) + Dividend (5pts).'
+            : 'Risk score: High P/E (25pts) + Near 52W high (20pts) + Negative EPS growth (20pts) + High D/E (15pts) + Analyst downside (15pts) + Negative margin (5pts).'
+          }</div>
+          <span class="source-badge sb-calc">Calculated</span>
+        </div>
+        <div class="source-item">
+          <div class="source-metric">News Sentiment · AI Analysis</div>
+          <div class="source-origin">Claude AI (Anthropic)</div>
+          <div class="source-detail">Recent headlines from Yahoo Finance news feed, analysed by Claude Haiku. Sentiment: positive / neutral / negative.</div>
+          <span class="source-badge sb-ai">Claude AI</span>
+        </div>
+      </div>
+      <div class="sources-footer">
+        <span>Data as of scan time: ${new Date().toLocaleString()}</span>
+        <a href="https://finance.yahoo.com/quote/${s.ticker}" target="_blank">
+          View ${s.ticker} on Yahoo Finance
+        </a>
+        <span style="color:var(--muted)">Not financial advice — see disclaimer above</span>
+      </div>
+    </div>
+
   </div>`;
+}
+
+function toggleSources(ticker, idx) {
+  const toggle = document.getElementById('src-toggle-' + ticker + '-' + idx);
+  const panel  = document.getElementById('src-panel-'  + ticker + '-' + idx);
+  toggle.classList.toggle('open');
+  panel.classList.toggle('open');
 }
 
 async function runScreen() {
