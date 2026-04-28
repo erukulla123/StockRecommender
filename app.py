@@ -316,7 +316,7 @@ def run_screener_job(job_id, params):
                 buy_filters.append(EquityQuery('lt', ['intradayprice', price_max]))
 
             buy_q  = EquityQuery('and', buy_filters)
-            buy_r  = yf.screen(buy_q, sortField='trailingpe', sortAsc=True, size=300)
+            buy_r  = yf.screen(buy_q, sortField='trailingpe', sortAsc=True, size=250)
             buy_tickers = [q['symbol'] for q in buy_r.get('quotes', []) if q.get('symbol')]
 
             # SELL candidate query: high P/E (overvalued) + price range + US exchanges
@@ -357,7 +357,7 @@ def run_screener_job(job_id, params):
                     EquityQuery('is-in', ['exchange', 'NMS', 'NYQ']),
                     EquityQuery('gt',    ['intradaymarketcap', 200_000_000]),
                 ])
-                result  = yf.screen(q, sortField='intradaymarketcap', sortAsc=False, size=300)
+                result  = yf.screen(q, sortField='intradaymarketcap', sortAsc=False, size=250)
                 tickers = [q['symbol'] for q in result.get('quotes', []) if q.get('symbol')]
                 update(8, f"Fallback screen returned {len(tickers)} candidates. Filtering...")
             except Exception as e2:
