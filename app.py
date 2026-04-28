@@ -24,7 +24,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 login_manager.init_app(app)
-login_manager.login_view    = "auth.login"
+login_manager.login_view    = "auth_blueprint.login"
 login_manager.login_message = "Please sign in to use StockRecommender."
 app.register_blueprint(auth_blueprint)
 
@@ -512,6 +512,11 @@ def send_report_email(to_email, buy_stocks, sell_stocks, params):
 
 
 # ─── Routes ───────────────────────────────────────────────────────────────────
+
+@app.route("/legal")
+def legal():
+    return render_template("legal.html")
+
 
 @app.route("/")
 @login_required

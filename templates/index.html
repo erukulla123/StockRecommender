@@ -490,6 +490,106 @@
   .sources-footer a { color: var(--accent); text-decoration: none; }
   .sources-footer a:hover { text-decoration: underline; }
 
+  /* ── Legal modal ── */
+  .legal-overlay {
+    display: none; position: fixed; inset: 0; z-index: 999;
+    background: rgba(0,0,0,0.75); backdrop-filter: blur(4px);
+    align-items: center; justify-content: center; padding: 20px;
+  }
+  .legal-overlay.show { display: flex; }
+  .legal-modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    max-width: 560px; width: 100%;
+    max-height: 85vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .legal-modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .legal-modal-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.2rem; color: var(--text); margin-bottom: 4px;
+  }
+  .legal-modal-sub {
+    font-size: 0.75rem; color: var(--muted);
+  }
+  .legal-modal-body {
+    padding: 18px 24px;
+    overflow-y: auto; flex: 1;
+    font-size: 0.8rem; color: #a1a1aa; line-height: 1.7;
+  }
+  .legal-modal-body h3 {
+    font-size: 0.75rem; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--text); margin: 14px 0 6px;
+  }
+  .legal-modal-body h3:first-child { margin-top: 0; }
+  .legal-modal-body p { margin-bottom: 10px; }
+  .legal-modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  .legal-checkbox-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 14px; cursor: pointer;
+  }
+  .legal-checkbox-row input[type="checkbox"] {
+    margin-top: 2px; flex-shrink: 0;
+    width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent);
+  }
+  .legal-checkbox-label {
+    font-size: 0.78rem; color: var(--muted); line-height: 1.5;
+  }
+  .legal-checkbox-label a { color: var(--accent); text-decoration: none; }
+  .legal-checkbox-label a:hover { text-decoration: underline; }
+  .btn-accept {
+    width: 100%; padding: 12px; background: var(--accent); color: #000;
+    border: none; border-radius: 8px; font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem; font-weight: 600; cursor: not-allowed; opacity: 0.4;
+    transition: all .2s;
+  }
+  .btn-accept.enabled { opacity: 1; cursor: pointer; }
+  .btn-accept.enabled:hover { background: #67e8f9; }
+
+  /* ── Legal footer ── */
+  .legal-footer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-top: 32px;
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.65;
+  }
+  .legal-footer-title {
+    font-size: 0.65rem; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text); margin-bottom: 6px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .legal-footer-title::before {
+    content: ''; display: inline-block;
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--amber); flex-shrink: 0;
+  }
+  .legal-footer-links {
+    display: flex; gap: 16px; flex-wrap: wrap;
+    margin-top: 10px; padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .legal-footer-links a {
+    font-size: 0.7rem; color: var(--muted); text-decoration: none;
+    transition: color .15s;
+  }
+  .legal-footer-links a:hover { color: var(--accent); }
+
   /* ── Mobile tweaks ── */
   @media (max-width: 480px) {
     .header { padding: 20px 0 18px; }
@@ -714,6 +814,87 @@
     <p>No stocks matched your criteria.<br>Try relaxing the filters.</p>
   </div>
 
+  <!-- Legal footer -->
+  <div class="legal-footer">
+    <div class="legal-footer-title">Important Disclaimer</div>
+    <p>
+      StockRecommender is an <strong>educational and informational tool only</strong>.
+      All content, including BUY and SELL signals, AI analysis, scoring, and news sentiment,
+      is provided for general informational purposes and does not constitute
+      <strong>investment advice, financial advice, trading advice, or any other type of advice</strong>.
+    </p>
+    <p>
+      StockRecommender is <strong>not registered</strong> as an investment adviser with the U.S. Securities
+      and Exchange Commission (SEC) or any state securities authority, nor with the Financial Conduct
+      Authority (FCA) or any other regulatory body. Nothing on this platform should be construed as
+      a solicitation or offer to buy or sell any security.
+    </p>
+    <p>
+      Past performance of any signal, recommendation, or algorithm does not guarantee future results.
+      All investments involve risk, including the possible loss of principal.
+      You should always conduct your own independent research and consult a
+      <strong>qualified financial adviser</strong> before making any investment decision.
+    </p>
+    <div class="legal-footer-links">
+      <a href="/legal">Full Legal Disclaimer</a>
+      <a href="/legal#terms">Terms of Service</a>
+      <a href="/legal#privacy">Privacy Policy</a>
+      <a href="mailto:support@stockrecommender.app">Contact Us</a>
+      <span style="margin-left:auto;color:var(--dim);">
+        &copy; 2026 StockRecommender. All rights reserved.
+      </span>
+    </div>
+  </div>
+
+</div>
+
+<!-- Legal acceptance modal -->
+<div class="legal-overlay" id="legal-modal">
+  <div class="legal-modal">
+    <div class="legal-modal-header">
+      <div class="legal-modal-title">Before you continue</div>
+      <div class="legal-modal-sub">Please read and accept our terms to use StockRecommender</div>
+    </div>
+    <div class="legal-modal-body">
+      <h3>Not financial advice</h3>
+      <p>StockRecommender provides BUY and SELL signals for <strong>educational and informational purposes only</strong>.
+      These signals are generated by algorithms and AI and do not constitute investment advice, financial advice,
+      or a recommendation to buy or sell any security.</p>
+
+      <h3>No regulatory registration</h3>
+      <p>StockRecommender is not registered as an investment adviser with the SEC, FINRA, FCA,
+      or any other financial regulatory authority. We are a technology product, not a licensed financial service.</p>
+
+      <h3>Risk of loss</h3>
+      <p>All investments carry risk. You may lose some or all of your invested capital.
+      Past performance of our signals does not guarantee future results.
+      Never invest money you cannot afford to lose.</p>
+
+      <h3>Do your own research</h3>
+      <p>Always conduct your own independent research and consult a qualified, licensed financial
+      adviser before making any investment decision. The data displayed is sourced from Yahoo Finance
+      and may contain errors, delays, or inaccuracies.</p>
+
+      <h3>Data accuracy</h3>
+      <p>Financial data is sourced from Yahoo Finance via their public API. AI analysis is generated
+      by Anthropic Claude. While we strive for accuracy, we make no warranties regarding the
+      completeness, accuracy, or timeliness of any information displayed.</p>
+    </div>
+    <div class="legal-modal-footer">
+      <label class="legal-checkbox-row" for="legal-check">
+        <input type="checkbox" id="legal-check" onchange="toggleAccept(this.checked)">
+        <span class="legal-checkbox-label">
+          I understand that StockRecommender is for informational purposes only and does not
+          constitute financial advice. I agree to the
+          <a href="/legal#terms" target="_blank">Terms of Service</a> and
+          <a href="/legal#privacy" target="_blank">Privacy Policy</a>.
+        </span>
+      </label>
+      <button class="btn-accept" id="btn-accept" onclick="acceptLegal()" disabled>
+        I understand — continue to StockRecommender
+      </button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1041,6 +1222,24 @@ async function sendEmail() {
 const style = document.createElement('style');
 style.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
 document.head.appendChild(style);
+
+// Legal modal — show on first visit, remember acceptance in localStorage
+function toggleAccept(checked) {
+  const btn = document.getElementById('btn-accept');
+  btn.disabled = !checked;
+  btn.classList.toggle('enabled', checked);
+}
+
+function acceptLegal() {
+  if (!document.getElementById('legal-check').checked) return;
+  localStorage.setItem('sr_legal_accepted', '1');
+  document.getElementById('legal-modal').classList.remove('show');
+}
+
+// Show modal if not yet accepted
+if (!localStorage.getItem('sr_legal_accepted')) {
+  document.getElementById('legal-modal').classList.add('show');
+}
 </script>
 </body>
 </html>

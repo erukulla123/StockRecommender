@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Legal — StockRecommender</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: #09090b; color: #e4e4e7;
+    min-height: 100vh; padding: 0 0 80px;
+  }
+  .header {
+    padding: 20px 32px; display: flex; align-items: center;
+    gap: 16px; border-bottom: 1px solid #27272a;
+    background: rgba(9,9,11,0.9); position: sticky; top: 0; z-index: 10;
+  }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: #22d3ee; }
+  .logo span { color: #71717a; }
+  .back-link {
+    margin-left: auto; font-size: 0.78rem; color: #71717a;
+    text-decoration: none; transition: color .15s;
+  }
+  .back-link:hover { color: #22d3ee; }
+  .container { max-width: 760px; margin: 0 auto; padding: 40px 24px; }
+
+  /* Nav tabs */
+  .nav { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 36px; }
+  .nav a {
+    padding: 7px 16px; border-radius: 20px; font-size: 0.82rem;
+    border: 1px solid #27272a; color: #71717a; text-decoration: none;
+    transition: all .15s;
+  }
+  .nav a:hover, .nav a.active {
+    background: rgba(34,211,238,.08); color: #22d3ee;
+    border-color: rgba(34,211,238,.3);
+  }
+
+  /* Sections */
+  .section { margin-bottom: 56px; scroll-margin-top: 80px; }
+  .section-eyebrow {
+    font-size: 0.65rem; font-weight: 600; letter-spacing: 0.12em;
+    text-transform: uppercase; color: #22d3ee; margin-bottom: 8px;
+  }
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.8rem; color: #fafafa; margin-bottom: 6px; line-height: 1.2;
+  }
+  .section-date { font-size: 0.75rem; color: #52525b; margin-bottom: 24px; }
+  .warning-box {
+    background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.2);
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 28px;
+    font-size: 0.83rem; color: #d97706; line-height: 1.65;
+  }
+  .warning-box strong { color: #f59e0b; }
+
+  h2 {
+    font-size: 0.95rem; font-weight: 600; color: #fafafa;
+    margin: 28px 0 10px; padding-bottom: 8px;
+    border-bottom: 1px solid #27272a;
+  }
+  h2:first-of-type { margin-top: 0; }
+  p { font-size: 0.85rem; color: #a1a1aa; line-height: 1.75; margin-bottom: 14px; }
+  p:last-child { margin-bottom: 0; }
+  ul { padding-left: 20px; margin-bottom: 14px; }
+  li { font-size: 0.85rem; color: #a1a1aa; line-height: 1.75; margin-bottom: 6px; }
+  strong { color: #e4e4e7; }
+  a { color: #22d3ee; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .divider { border: none; border-top: 1px solid #27272a; margin: 48px 0; }
+
+  .data-table { width: 100%; border-collapse: collapse; margin: 14px 0 20px; font-size: 0.82rem; }
+  .data-table th {
+    text-align: left; padding: 8px 12px; background: #18181b;
+    color: #a1a1aa; font-weight: 500; font-size: 0.72rem;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    border: 1px solid #27272a;
+  }
+  .data-table td {
+    padding: 8px 12px; border: 1px solid #27272a;
+    color: #a1a1aa; vertical-align: top;
+  }
+  .contact-box {
+    background: #111113; border: 1px solid #27272a; border-radius: 10px;
+    padding: 18px 22px; margin-top: 20px; font-size: 0.83rem; color: #a1a1aa;
+  }
+  .contact-box a { color: #22d3ee; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" style="text-decoration:none;">
+    <div class="logo">Stock<span>Recommender</span></div>
+  </a>
+  <a href="/" class="back-link">← Back to app</a>
+</div>
+
+<div class="container">
+
+  <div class="nav">
+    <a href="#disclaimer" class="active">Disclaimer</a>
+    <a href="#terms">Terms of Service</a>
+    <a href="#privacy">Privacy Policy</a>
+    <a href="#contact">Contact</a>
+  </div>
+
+  <!-- ── Investment Disclaimer ─────────────────────────────────────── -->
+  <div class="section" id="disclaimer">
+    <div class="section-eyebrow">Legal</div>
+    <div class="section-title">Investment Disclaimer</div>
+    <div class="section-date">Last updated: April 2026</div>
+
+    <div class="warning-box">
+      <strong>Important:</strong> StockRecommender does not provide investment advice.
+      All signals, scores, and analysis are for <strong>informational and educational
+      purposes only</strong>. Always consult a qualified financial adviser before
+      making any investment decision.
+    </div>
+
+    <h2>Not investment advice</h2>
+    <p>The information, data, analysis, and signals provided by StockRecommender — including
+    but not limited to BUY signals, SELL signals, scoring algorithms, AI-generated analysis,
+    news sentiment ratings, and any other content — are provided solely for
+    <strong>informational and educational purposes</strong>.</p>
+    <p>Nothing on this platform constitutes, and should not be construed as,
+    investment advice, financial advice, trading advice, legal advice, tax advice,
+    or any recommendation to buy, sell, or hold any security, financial instrument,
+    or investment of any kind.</p>
+
+    <h2>No regulatory registration</h2>
+    <p>StockRecommender is a technology platform and is <strong>not registered</strong> as:</p>
+    <ul>
+      <li>An Investment Adviser with the U.S. Securities and Exchange Commission (SEC)</li>
+      <li>A broker-dealer or investment adviser with FINRA or any state securities authority</li>
+      <li>An Authorised Person with the UK Financial Conduct Authority (FCA)</li>
+      <li>Any equivalent financial services regulator in any other jurisdiction</li>
+    </ul>
+    <p>Use of this platform does not create an adviser-client relationship between you
+    and StockRecommender.</p>
+
+    <h2>Risk of loss</h2>
+    <p>All investments involve risk, including the <strong>possible loss of your entire
+    invested capital</strong>. Stock prices can and do fall to zero. Past performance
+    of any signal, algorithm, or recommendation does not guarantee or predict future results.
+    You should never invest money that you cannot afford to lose entirely.</p>
+
+    <h2>Data accuracy and limitations</h2>
+    <p>Financial data displayed on StockRecommender is sourced from Yahoo Finance via their
+    public API. AI-generated analysis is produced by Anthropic Claude. While we strive for
+    accuracy, we make <strong>no warranties</strong>, express or implied, regarding the
+    completeness, accuracy, reliability, suitability, or timeliness of any information.
+    Data may be delayed, incomplete, or contain errors.</p>
+
+    <h2>Independent research required</h2>
+    <p>Before making any investment decision, you should:</p>
+    <ul>
+      <li>Conduct your own independent due diligence and research</li>
+      <li>Consult a qualified, licensed financial adviser or investment professional</li>
+      <li>Consider your own financial situation, investment objectives, and risk tolerance</li>
+      <li>Verify all data from primary sources (company filings, official exchanges)</li>
+    </ul>
+
+    <h2>Limitation of liability</h2>
+    <p>To the fullest extent permitted by law, StockRecommender and its operators shall not
+    be liable for any direct, indirect, incidental, special, consequential, or punitive damages
+    arising from your use of, or reliance on, any information provided by this platform,
+    including any investment losses.</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ── Terms of Service ──────────────────────────────────────────── -->
+  <div class="section" id="terms">
+    <div class="section-eyebrow">Legal</div>
+    <div class="section-title">Terms of Service</div>
+    <div class="section-date">Last updated: April 2026</div>
+
+    <h2>Acceptance of terms</h2>
+    <p>By creating an account or using StockRecommender (the "Service"), you agree to be
+    bound by these Terms of Service. If you do not agree, do not use the Service.</p>
+
+    <h2>Description of service</h2>
+    <p>StockRecommender is a web-based stock screening tool that uses publicly available
+    financial data and AI to generate informational signals. The Service is provided
+    "as is" for educational purposes only.</p>
+
+    <h2>Eligibility</h2>
+    <p>You must be at least 18 years of age to use the Service. By using the Service,
+    you represent that you meet this requirement.</p>
+
+    <h2>Account responsibilities</h2>
+    <p>You are responsible for maintaining the confidentiality of your account credentials
+    and for all activities that occur under your account. You agree to notify us immediately
+    of any unauthorised use of your account.</p>
+
+    <h2>Acceptable use</h2>
+    <p>You agree not to:</p>
+    <ul>
+      <li>Use the Service for any unlawful purpose</li>
+      <li>Attempt to reverse-engineer, scrape, or automate access to the Service</li>
+      <li>Share your account credentials with others</li>
+      <li>Use the Service to manipulate markets or engage in market abuse</li>
+      <li>Reproduce or redistribute our signals or data commercially without permission</li>
+    </ul>
+
+    <h2>Subscription and payment</h2>
+    <p>Paid plans are billed monthly or annually. Subscriptions automatically renew unless
+    cancelled before the renewal date. Refunds are provided at our discretion. We reserve
+    the right to change pricing with 30 days' notice.</p>
+
+    <h2>Termination</h2>
+    <p>We reserve the right to suspend or terminate your account at any time for violation
+    of these terms or for any other reason at our sole discretion.</p>
+
+    <h2>Changes to terms</h2>
+    <p>We may update these Terms at any time. Continued use of the Service after changes
+    constitutes acceptance of the updated Terms.</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ── Privacy Policy ────────────────────────────────────────────── -->
+  <div class="section" id="privacy">
+    <div class="section-eyebrow">Legal</div>
+    <div class="section-title">Privacy Policy</div>
+    <div class="section-date">Last updated: April 2026</div>
+
+    <h2>Information we collect</h2>
+    <table class="data-table">
+      <tr>
+        <th>Data</th><th>Why we collect it</th><th>How long we keep it</th>
+      </tr>
+      <tr>
+        <td>Email address</td>
+        <td>Account creation, login, password reset, sending reports</td>
+        <td>Until account deletion</td>
+      </tr>
+      <tr>
+        <td>Password (hashed)</td>
+        <td>Authentication — stored as a bcrypt hash, never in plain text</td>
+        <td>Until account deletion</td>
+      </tr>
+      <tr>
+        <td>Scan history</td>
+        <td>Showing past results, improving recommendations</td>
+        <td>90 days</td>
+      </tr>
+      <tr>
+        <td>Usage data</td>
+        <td>Improving the product, detecting abuse</td>
+        <td>12 months</td>
+      </tr>
+    </table>
+
+    <h2>Information we do not collect</h2>
+    <ul>
+      <li>We do not collect your brokerage details, portfolio holdings, or financial accounts</li>
+      <li>We do not sell your data to third parties</li>
+      <li>We do not use your data for advertising</li>
+      <li>We do not track you across other websites</li>
+    </ul>
+
+    <h2>Third-party services</h2>
+    <p>StockRecommender uses the following third-party services:</p>
+    <ul>
+      <li><strong>Yahoo Finance API</strong> — fetches stock data. Subject to Yahoo's terms.</li>
+      <li><strong>Anthropic Claude API</strong> — generates AI analysis. Subject to Anthropic's privacy policy.</li>
+      <li><strong>Render.com</strong> — hosts the application and database.</li>
+      <li><strong>Stripe</strong> — processes payments (if applicable). Stripe handles all payment data.</li>
+    </ul>
+
+    <h2>Data security</h2>
+    <p>Passwords are hashed using industry-standard bcrypt. All data is transmitted over
+    HTTPS. Database access is restricted. However, no system is perfectly secure —
+    use a unique password for your account.</p>
+
+    <h2>Your rights</h2>
+    <p>You may request deletion of your account and associated data at any time by
+    contacting us. We will process deletion requests within 30 days.</p>
+
+    <h2>Cookies</h2>
+    <p>We use a single session cookie to keep you logged in. We do not use tracking,
+    advertising, or analytics cookies.</p>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ── Contact ───────────────────────────────────────────────────── -->
+  <div class="section" id="contact">
+    <div class="section-eyebrow">Legal</div>
+    <div class="section-title">Contact Us</div>
+    <p>For legal enquiries, data requests, or questions about these policies:</p>
+    <div class="contact-box">
+      <strong>StockRecommender</strong><br>
+      Email: <a href="mailto:legal@stockrecommender.app">legal@stockrecommender.app</a><br>
+      Support: <a href="mailto:support@stockrecommender.app">support@stockrecommender.app</a>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Highlight nav link based on scroll position
+const sections = ['disclaimer','terms','privacy','contact'];
+const links = {};
+sections.forEach(id => {
+  links[id] = document.querySelector('.nav a[href="#' + id + '"]');
+});
+
+window.addEventListener('scroll', () => {
+  let current = 'disclaimer';
+  sections.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && window.scrollY >= el.offsetTop - 100) current = id;
+  });
+  Object.entries(links).forEach(([id, link]) => {
+    if (link) link.classList.toggle('active', id === current);
+  });
+});
+</script>
+</body>
+</html>
