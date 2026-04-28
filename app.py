@@ -24,7 +24,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 login_manager.init_app(app)
-login_manager.login_view    = "auth.login"
+login_manager.login_view    = "auth_blueprint.login"
 login_manager.login_message = "Please sign in to use StockRecommender."
 app.register_blueprint(auth_blueprint)
 
@@ -290,28 +290,76 @@ def run_screener_job(job_id, params):
     try:
         update(3, "Connecting to Yahoo Finance screener...")
         tickers = []
+
+        max_pe     = params["max_pe"]
+        price_min  = params.get("price_min", 0)
+        price_max  = params.get("price_max", 99999)
+
+        # ── Stage 1: Ask Yahoo Finance to pre-filter by your actual criteria ──
+        # This scans the full US market universe, not just the top 300 by market cap.
+        # We run TWO queries — one for BUY candidates (low P/E) and one for SELL
+        # candidates (high P/E / near highs) — then merge the tickers.
         try:
             from yfinance import EquityQuery
-            # For BUY: screen low P/E stocks
-            q = EquityQuery('and', [
+
+            # BUY candidate query: P/E within user's threshold + price range + US exchanges
+            buy_filters = [
                 EquityQuery('eq',    ['region', 'us']),
-                EquityQuery('is-in', ['exchange', 'NMS', 'NYQ']),
-                EquityQuery('gt',    ['intradaymarketcap', 500_000_000]),
-            ])
-            result  = yf.screen(q, sortField='intradaymarketcap', sortAsc=False, size=300)
-            tickers = [q['symbol'] for q in result.get('quotes', []) if q.get('symbol')]
-            update(8, f"Screener returned {len(tickers)} candidates. Analyzing...")
+                EquityQuery('is-in', ['exchange', 'NMS', 'NYQ', 'ASE']),  # NYSE, NASDAQ, AMEX
+                EquityQuery('gt',    ['intradaymarketcap', 100_000_000]),  # min $100M market cap
+                EquityQuery('btwn',  ['trailingpe', 0.01, max_pe]),        # P/E within user threshold
+            ]
+            # Add price range filters only if user set them
+            if price_min > 0:
+                buy_filters.append(EquityQuery('gt', ['intradayprice', price_min]))
+            if price_max < 99999:
+                buy_filters.append(EquityQuery('lt', ['intradayprice', price_max]))
+
+            buy_q  = EquityQuery('and', buy_filters)
+            buy_r  = yf.screen(buy_q, sortField='trailingpe', sortAsc=True, size=300)
+            buy_tickers = [q['symbol'] for q in buy_r.get('quotes', []) if q.get('symbol')]
+
+            # SELL candidate query: high P/E (overvalued) + price range + US exchanges
+            sell_filters = [
+                EquityQuery('eq',    ['region', 'us']),
+                EquityQuery('is-in', ['exchange', 'NMS', 'NYQ', 'ASE']),
+                EquityQuery('gt',    ['intradaymarketcap', 100_000_000]),
+                EquityQuery('gt',    ['trailingpe', 25]),  # overvalued stocks
+            ]
+            if price_min > 0:
+                sell_filters.append(EquityQuery('gt', ['intradayprice', price_min]))
+            if price_max < 99999:
+                sell_filters.append(EquityQuery('lt', ['intradayprice', price_max]))
+
+            sell_q  = EquityQuery('and', sell_filters)
+            sell_r  = yf.screen(sell_q, sortField='trailingpe', sortAsc=False, size=200)
+            sell_tickers = [q['symbol'] for q in sell_r.get('quotes', []) if q.get('symbol')]
+
+            # Merge — deduplicate, buy tickers first
+            seen    = set()
+            tickers = []
+            for t in buy_tickers + sell_tickers:
+                if t not in seen:
+                    seen.add(t)
+                    tickers.append(t)
+
+            update(8, f"Yahoo screener found {len(buy_tickers)} BUY candidates "
+                      f"and {len(sell_tickers)} SELL candidates "
+                      f"({len(tickers)} unique). Fetching fundamentals...")
+
         except Exception as e:
-            update(5, f"Using fallback screen...")
+            update(5, f"Primary screen failed ({e}). Trying broad fallback...")
             try:
                 from yfinance import EquityQuery
+                # Fallback: broad US screen, apply all filters locally
                 q = EquityQuery('and', [
                     EquityQuery('eq',    ['region', 'us']),
                     EquityQuery('is-in', ['exchange', 'NMS', 'NYQ']),
-                    EquityQuery('gt',    ['intradaymarketcap', 1_000_000_000]),
+                    EquityQuery('gt',    ['intradaymarketcap', 200_000_000]),
                 ])
-                result  = yf.screen(q, sortField='intradaymarketcap', sortAsc=False, size=200)
+                result  = yf.screen(q, sortField='intradaymarketcap', sortAsc=False, size=300)
                 tickers = [q['symbol'] for q in result.get('quotes', []) if q.get('symbol')]
+                update(8, f"Fallback screen returned {len(tickers)} candidates. Filtering...")
             except Exception as e2:
                 jobs[job_id].update({"status": "error", "msg": f"Screener failed: {e2}"})
                 return
