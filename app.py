@@ -24,7 +24,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db.init_app(app)
 login_manager.init_app(app)
-login_manager.login_view    = "auth.login"
+login_manager.login_view    = "auth_blueprint.login"
 login_manager.login_message = "Please sign in to use StockRecommender."
 app.register_blueprint(auth_blueprint)
 
@@ -630,6 +630,165 @@ def send_email_route():
     }
     ok, msg = send_report_email(to_email, buy_stocks, sell_stocks, params)
     return jsonify({"success": ok, "msg": msg})
+
+
+@app.route("/fundamentals/<ticker>")
+@login_required
+def fundamentals(ticker):
+    """Return deep-dive fundamentals for a single ticker."""
+    try:
+        t    = yf.Ticker(ticker.upper())
+        info = t.info
+
+        # ── Price history (12 months) ─────────────────────────────────────
+        hist = t.history(period="1y")
+        price_history = []
+        if not hist.empty:
+            # Sample ~52 weekly points to keep payload small
+            step = max(1, len(hist) // 52)
+            for i, (dt, row) in enumerate(hist.iterrows()):
+                if i % step == 0:
+                    price_history.append({
+                        "date":  dt.strftime("%Y-%m-%d"),
+                        "close": round(float(row["Close"]), 2),
+                        "volume": int(row["Volume"]),
+                    })
+
+        # ── Quarterly earnings ───────────────────────────────────────────
+        earnings = []
+        try:
+            qe = t.quarterly_earnings
+            if qe is not None and not qe.empty:
+                for idx, row in qe.tail(8).iterrows():
+                    earnings.append({
+                        "quarter":  str(idx),
+                        "actual":   round(float(row.get("Actual",   0) or 0), 2),
+                        "estimate": round(float(row.get("Estimate", 0) or 0), 2),
+                    })
+        except Exception:
+            pass
+
+        # ── Quarterly revenue ─────────────────────────────────────────────
+        revenue = []
+        try:
+            qf = t.quarterly_financials
+            if qf is not None and not qf.empty and "Total Revenue" in qf.index:
+                rev_row = qf.loc["Total Revenue"]
+                for col in list(rev_row.index)[:8]:
+                    val = rev_row[col]
+                    if val and not (isinstance(val, float) and val != val):
+                        revenue.append({
+                            "quarter": str(col)[:10],
+                            "revenue": round(float(val) / 1e9, 2),  # in billions
+                        })
+                revenue.reverse()
+        except Exception:
+            pass
+
+        # ── Recent news ──────────────────────────────────────────────────
+        news = []
+        try:
+            raw_news = t.news or []
+            for n in raw_news[:8]:
+                content_obj = n.get("content", {})
+                title  = content_obj.get("title")  or n.get("title",  "")
+                summary = content_obj.get("summary") or n.get("summary", "")
+                url    = (content_obj.get("canonicalUrl", {}) or {}).get("url") or n.get("link", "")
+                pub    = content_obj.get("pubDate") or n.get("providerPublishTime", "")
+                source = (content_obj.get("provider", {}) or {}).get("displayName") or n.get("publisher", "")
+                if title:
+                    news.append({
+                        "title":   title,
+                        "summary": summary[:200] if summary else "",
+                        "url":     url,
+                        "source":  source,
+                        "date":    str(pub)[:10] if pub else "",
+                    })
+        except Exception:
+            pass
+
+        # ── Analyst recommendations ──────────────────────────────────────
+        analysts = {}
+        try:
+            rec = t.recommendations
+            if rec is not None and not rec.empty:
+                latest = rec.tail(1).iloc[0]
+                analysts = {
+                    "strong_buy":  int(latest.get("strongBuy",  latest.get("Strong Buy",  0) or 0)),
+                    "buy":         int(latest.get("buy",         latest.get("Buy",         0) or 0)),
+                    "hold":        int(latest.get("hold",        latest.get("Hold",        0) or 0)),
+                    "sell":        int(latest.get("sell",        latest.get("Sell",        0) or 0)),
+                    "strong_sell": int(latest.get("strongSell", latest.get("Strong Sell", 0) or 0)),
+                }
+        except Exception:
+            pass
+
+        # ── Core fundamentals ────────────────────────────────────────────
+        def safe(key, default=None):
+            v = info.get(key)
+            return default if v is None or (isinstance(v, float) and v != v) else v
+
+        result = {
+            "ticker":        ticker.upper(),
+            "company":       safe("longName", ticker),
+            "sector":        safe("sector",   "Unknown"),
+            "industry":      safe("industry", "Unknown"),
+            "description":   safe("longBusinessSummary", ""),
+            "website":       safe("website",  ""),
+            "employees":     safe("fullTimeEmployees"),
+            "headquarters":  f"{safe('city','')}, {safe('country','')}".strip(", "),
+            # Valuation
+            "price":         safe("currentPrice") or safe("regularMarketPrice"),
+            "market_cap_b":  round(safe("marketCap", 0) / 1e9, 2),
+            "pe_ratio":      safe("trailingPE"),
+            "forward_pe":    safe("forwardPE"),
+            "pb_ratio":      safe("priceToBook"),
+            "ps_ratio":      safe("priceToSalesTrailing12Months"),
+            "ev_ebitda":     safe("enterpriseToEbitda"),
+            "peg_ratio":     safe("pegRatio"),
+            # Performance
+            "week52_high":   safe("fiftyTwoWeekHigh"),
+            "week52_low":    safe("fiftyTwoWeekLow"),
+            "day50_ma":      safe("fiftyDayAverage"),
+            "day200_ma":     safe("twoHundredDayAverage"),
+            "beta":          safe("beta"),
+            "ytd_return":    safe("ytdReturn"),
+            # Financials
+            "revenue_b":     round(safe("totalRevenue", 0) / 1e9, 2),
+            "gross_margin":  safe("grossMargins"),
+            "profit_margin": safe("profitMargins"),
+            "roe":           safe("returnOnEquity"),
+            "roa":           safe("returnOnAssets"),
+            "debt_to_equity":safe("debtToEquity"),
+            "current_ratio": safe("currentRatio"),
+            "free_cashflow_b": round(safe("freeCashflow", 0) / 1e9, 2),
+            "eps_ttm":       safe("trailingEps"),
+            "eps_forward":   safe("forwardEps"),
+            "eps_growth":    safe("earningsGrowth"),
+            "revenue_growth":safe("revenueGrowth"),
+            # Dividends
+            "dividend_yield":  safe("dividendYield"),
+            "dividend_rate":   safe("dividendRate"),
+            "payout_ratio":    safe("payoutRatio"),
+            "ex_div_date":     str(safe("exDividendDate", ""))[:10],
+            # Analyst
+            "analyst_target":  safe("targetMeanPrice"),
+            "analyst_low":     safe("targetLowPrice"),
+            "analyst_high":    safe("targetHighPrice"),
+            "analyst_rating":  safe("recommendationMean"),
+            "analyst_key":     safe("recommendationKey", ""),
+            "num_analysts":    safe("numberOfAnalystOpinions"),
+            # Charts
+            "price_history":   price_history,
+            "quarterly_earnings": earnings,
+            "quarterly_revenue":  revenue,
+            "news":            news,
+            "analyst_breakdown": analysts,
+        }
+        return jsonify(result)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":

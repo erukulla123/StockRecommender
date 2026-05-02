@@ -590,6 +590,92 @@
   }
   .legal-footer-links a:hover { color: var(--accent); }
 
+  /* ── Deep-dive modal ── */
+  .dd-overlay {
+    display:none; position:fixed; inset:0; z-index:998;
+    background:rgba(0,0,0,0.8); backdrop-filter:blur(6px);
+    align-items:flex-start; justify-content:center;
+    padding:20px; overflow-y:auto;
+  }
+  .dd-overlay.show { display:flex; }
+  .dd-modal {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:14px; width:100%; max-width:860px;
+    margin:auto; overflow:hidden;
+  }
+  .dd-header {
+    padding:20px 24px 16px; border-bottom:1px solid var(--border);
+    display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+    position:sticky; top:0; background:var(--surface); z-index:2;
+  }
+  .dd-ticker { font-family:'IBM Plex Mono',monospace; font-size:1.3rem; font-weight:500; color:var(--accent); }
+  .dd-company { font-size:0.82rem; color:var(--muted); margin-top:3px; }
+  .dd-close {
+    width:32px; height:32px; border-radius:8px; border:1px solid var(--border);
+    background:transparent; color:var(--muted); cursor:pointer; font-size:1.1rem;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    transition:all .15s;
+  }
+  .dd-close:hover { border-color:var(--border2); color:var(--text); }
+  .dd-body { padding:20px 24px; overflow-y:auto; max-height:80vh; }
+  .dd-section { margin-bottom:24px; }
+  .dd-section-title {
+    font-size:0.62rem; font-family:'IBM Plex Mono',monospace;
+    letter-spacing:0.12em; text-transform:uppercase; color:var(--muted);
+    margin-bottom:12px; display:flex; align-items:center; gap:8px;
+  }
+  .dd-section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+  .dd-stats { display:grid; grid-template-columns:repeat(auto-fill,minmax(130px,1fr)); gap:8px; }
+  .dd-stat {
+    background:var(--bg); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:10px 12px;
+  }
+  .dd-stat-label { font-size:0.58rem; font-family:'IBM Plex Mono',monospace;
+    letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); margin-bottom:3px; }
+  .dd-stat-value { font-size:0.92rem; font-family:'IBM Plex Mono',monospace;
+    font-weight:500; color:var(--text); }
+  .dd-stat-value.green { color:var(--green); }
+  .dd-stat-value.red   { color:var(--red); }
+  .dd-stat-value.amber { color:var(--amber); }
+  .dd-desc { font-size:0.8rem; color:#a1a1aa; line-height:1.7;
+    background:var(--bg); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:14px 16px; }
+  .dd-chart-wrap { background:var(--bg); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:14px; }
+  canvas.dd-chart { width:100% !important; height:200px !important; }
+  .dd-news { display:flex; flex-direction:column; gap:8px; }
+  .dd-news-item {
+    background:var(--bg); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:12px 14px;
+    text-decoration:none; transition:border-color .15s; display:block;
+  }
+  .dd-news-item:hover { border-color:var(--border2); }
+  .dd-news-title { font-size:0.82rem; color:var(--text); font-weight:500; line-height:1.4; margin-bottom:4px; }
+  .dd-news-meta  { font-size:0.65rem; color:var(--muted); font-family:'IBM Plex Mono',monospace; }
+  .dd-analyst-bars { display:flex; flex-direction:column; gap:6px; }
+  .dd-bar-row { display:flex; align-items:center; gap:10px; }
+  .dd-bar-label { font-size:0.7rem; color:var(--muted); min-width:80px;
+    font-family:'IBM Plex Mono',monospace; }
+  .dd-bar-track { flex:1; background:var(--border); border-radius:3px; height:8px; overflow:hidden; }
+  .dd-bar-fill  { height:100%; border-radius:3px; transition:width .6s ease; }
+  .dd-bar-count { font-size:0.7rem; color:var(--text); font-family:'IBM Plex Mono',monospace;
+    min-width:24px; text-align:right; }
+  .dd-loading { text-align:center; padding:60px 20px; color:var(--muted); font-size:0.82rem; }
+  .dd-spinner { width:28px; height:28px; border:2px solid var(--border);
+    border-top-color:var(--accent); border-radius:50%;
+    animation:spin .8s linear infinite; margin:0 auto 12px; }
+  .dd-error { text-align:center; padding:40px 20px; color:var(--red); font-size:0.82rem; }
+  .btn-deepdive {
+    display:inline-flex; align-items:center; gap:5px;
+    font-size:0.68rem; font-family:'IBM Plex Mono',monospace;
+    letter-spacing:0.08em; text-transform:uppercase;
+    color:var(--accent); background:rgba(34,211,238,.06);
+    border:1px solid rgba(34,211,238,.2); border-radius:6px;
+    padding:5px 10px; cursor:pointer; transition:all .15s;
+    text-decoration:none;
+  }
+  .btn-deepdive:hover { background:rgba(34,211,238,.12); border-color:rgba(34,211,238,.35); }
+
   /* ── Mobile tweaks ── */
   @media (max-width: 480px) {
     .header { padding: 20px 0 18px; }
@@ -972,6 +1058,12 @@ function renderCard(s, idx, mode='buy') {
       <div class="card-right">
         <span class="verdict-badge ${verdictClass}">${verdict}</span>
         <span class="card-score">${scoreLbl} <strong style="color:${scoreCol}">${score}</strong>/100</span>
+        <button class="btn-deepdive" onclick="openDeepDive('${s.ticker}', '${s.company}', event)">
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M1 5.5h9M5.5 1l4.5 4.5L5.5 10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Deep Dive
+        </button>
       </div>
     </div>
     <div class="score-wrap">
@@ -1241,5 +1333,309 @@ if (!localStorage.getItem('sr_legal_accepted')) {
   document.getElementById('legal-modal').classList.add('show');
 }
 </script>
+
+<!-- Chart.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+
+<!-- Deep-dive modal -->
+<div class="dd-overlay" id="dd-overlay" onclick="handleDDOverlayClick(event)">
+  <div class="dd-modal" id="dd-modal">
+    <div class="dd-header">
+      <div>
+        <div class="dd-ticker" id="dd-ticker">—</div>
+        <div class="dd-company" id="dd-company">—</div>
+      </div>
+      <button class="dd-close" onclick="closeDeepDive()">&#x2715;</button>
+    </div>
+    <div class="dd-body" id="dd-body">
+      <div class="dd-loading">
+        <div class="dd-spinner"></div>
+        Loading fundamentals...
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let priceChart = null, earningsChart = null, revenueChart = null;
+
+function handleDDOverlayClick(e) {
+  if (e.target === document.getElementById('dd-overlay')) closeDeepDive();
+}
+
+function closeDeepDive() {
+  document.getElementById('dd-overlay').classList.remove('show');
+  [priceChart, earningsChart, revenueChart].forEach(c => { if (c) c.destroy(); });
+  priceChart = earningsChart = revenueChart = null;
+}
+
+async function openDeepDive(ticker, company, e) {
+  e && e.stopPropagation();
+  document.getElementById('dd-ticker').textContent  = ticker;
+  document.getElementById('dd-company').textContent = company;
+  document.getElementById('dd-body').innerHTML =
+    '<div class="dd-loading"><div class="dd-spinner"></div>Loading fundamentals...</div>';
+  document.getElementById('dd-overlay').classList.add('show');
+  [priceChart, earningsChart, revenueChart].forEach(c => { if (c) c.destroy(); });
+  priceChart = earningsChart = revenueChart = null;
+
+  try {
+    const res  = await fetch('/fundamentals/' + ticker);
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    renderDeepDive(data);
+  } catch(err) {
+    document.getElementById('dd-body').innerHTML =
+      '<div class="dd-error">Failed to load data: ' + err.message + '</div>';
+  }
+}
+
+function fmtVal(v, pre='', suf='', fb='--') {
+  return (v === null || v === undefined) ? fb : pre + v + suf;
+}
+function fmtPct(v, fb='--') {
+  return (v === null || v === undefined) ? fb : (v*100).toFixed(1) + '%';
+}
+function fmtB(v, fb='--') {
+  return (v === null || v === undefined) ? fb : '$' + v + 'B';
+}
+function colorClass(v, goodIfPositive=true) {
+  if (v === null || v === undefined) return '';
+  return (goodIfPositive ? v >= 0 : v <= 0) ? 'green' : 'red';
+}
+
+function stat(label, value, cls='') {
+  return '<div class="dd-stat"><div class="dd-stat-label">' + label +
+         '</div><div class="dd-stat-value ' + cls + '">' + (value||'--') + '</div></div>';
+}
+
+function renderDeepDive(d) {
+  const upside = d.analyst_target && d.price
+    ? ((d.analyst_target - d.price) / d.price * 100).toFixed(1)
+    : null;
+  const pctFromHigh = d.week52_high && d.price
+    ? ((d.week52_high - d.price) / d.week52_high * 100).toFixed(1)
+    : null;
+
+  // Analyst breakdown total
+  const ab = d.analyst_breakdown || {};
+  const abTotal = (ab.strong_buy||0) + (ab.buy||0) + (ab.hold||0) + (ab.sell||0) + (ab.strong_sell||0);
+
+  function barRow(label, count, color) {
+    const pct = abTotal > 0 ? (count / abTotal * 100).toFixed(0) : 0;
+    return '<div class="dd-bar-row">' +
+      '<span class="dd-bar-label">' + label + '</span>' +
+      '<div class="dd-bar-track"><div class="dd-bar-fill" style="width:' + pct + '%;background:' + color + '"></div></div>' +
+      '<span class="dd-bar-count">' + count + '</span></div>';
+  }
+
+  const newsHtml = (d.news || []).map(n =>
+    '<a class="dd-news-item" href="' + (n.url||'#') + '" target="_blank" rel="noopener">' +
+    '<div class="dd-news-title">' + (n.title||'') + '</div>' +
+    '<div class="dd-news-meta">' + (n.source||'') + (n.date ? ' &nbsp;·&nbsp; ' + n.date : '') + '</div>' +
+    (n.summary ? '<div style="font-size:0.72rem;color:var(--muted);margin-top:4px;line-height:1.5">' + n.summary + '</div>' : '') +
+    '</a>'
+  ).join('') || '<div style="color:var(--muted);font-size:0.8rem;">No recent news available.</div>';
+
+  document.getElementById('dd-body').innerHTML = `
+    <!-- Description -->
+    <div class="dd-section">
+      <div class="dd-section-title">About</div>
+      <div class="dd-desc">
+        <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;font-size:0.75rem;color:var(--muted);">
+          <span><strong style="color:var(--text)">${d.sector}</strong> &nbsp;·&nbsp; ${d.industry}</span>
+          ${d.headquarters ? '<span>' + d.headquarters + '</span>' : ''}
+          ${d.employees ? '<span>' + Number(d.employees).toLocaleString() + ' employees</span>' : ''}
+          ${d.website ? '<a href="' + d.website + '" target="_blank" style="color:var(--accent);text-decoration:none;">' + d.website + '</a>' : ''}
+        </div>
+        ${d.description ? d.description.slice(0,600) + (d.description.length > 600 ? '...' : '') : 'No description available.'}
+      </div>
+    </div>
+
+    <!-- Valuation -->
+    <div class="dd-section">
+      <div class="dd-section-title">Valuation</div>
+      <div class="dd-stats">
+        ${stat('Price',       fmtVal(d.price,'$'))}
+        ${stat('Market Cap',  fmtB(d.market_cap_b))}
+        ${stat('P/E (TTM)',   fmtVal(d.pe_ratio,'','x'))}
+        ${stat('Fwd P/E',    fmtVal(d.forward_pe,'','x'))}
+        ${stat('P/B',        fmtVal(d.pb_ratio,'','x'))}
+        ${stat('P/S',        fmtVal(d.ps_ratio,'','x'))}
+        ${stat('EV/EBITDA',  fmtVal(d.ev_ebitda,'','x'))}
+        ${stat('PEG Ratio',  fmtVal(d.peg_ratio,'','x'))}
+      </div>
+    </div>
+
+    <!-- Performance -->
+    <div class="dd-section">
+      <div class="dd-section-title">Price Performance</div>
+      <div class="dd-stats" style="margin-bottom:12px;">
+        ${stat('52W High',    fmtVal(d.week52_high,'$'))}
+        ${stat('52W Low',     fmtVal(d.week52_low,'$'))}
+        ${stat('% off High',  pctFromHigh ? '-' + pctFromHigh + '%' : '--', pctFromHigh ? 'green' : '')}
+        ${stat('50D MA',      fmtVal(d.day50_ma,'$'))}
+        ${stat('200D MA',     fmtVal(d.day200_ma,'$'))}
+        ${stat('Beta',        fmtVal(d.beta))}
+      </div>
+      <div class="dd-chart-wrap">
+        <canvas id="priceChart" class="dd-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Financials -->
+    <div class="dd-section">
+      <div class="dd-section-title">Financials</div>
+      <div class="dd-stats" style="margin-bottom:12px;">
+        ${stat('Revenue',      fmtB(d.revenue_b))}
+        ${stat('Rev Growth',   fmtPct(d.revenue_growth), colorClass(d.revenue_growth))}
+        ${stat('Gross Margin', fmtPct(d.gross_margin))}
+        ${stat('Net Margin',   fmtPct(d.profit_margin),  colorClass(d.profit_margin))}
+        ${stat('ROE',          fmtPct(d.roe),             colorClass(d.roe))}
+        ${stat('ROA',          fmtPct(d.roa),             colorClass(d.roa))}
+        ${stat('D/E Ratio',    fmtVal(d.debt_to_equity,'','%'))}
+        ${stat('Current Ratio',fmtVal(d.current_ratio))}
+        ${stat('Free CF',      fmtB(d.free_cashflow_b))}
+        ${stat('EPS (TTM)',    fmtVal(d.eps_ttm,'$'))}
+        ${stat('Fwd EPS',     fmtVal(d.eps_forward,'$'))}
+        ${stat('EPS Growth',   fmtPct(d.eps_growth), colorClass(d.eps_growth))}
+      </div>
+      <div class="dd-chart-wrap">
+        <canvas id="earningsChart" class="dd-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- Revenue chart -->
+    ${d.quarterly_revenue && d.quarterly_revenue.length ? `
+    <div class="dd-section">
+      <div class="dd-section-title">Quarterly Revenue</div>
+      <div class="dd-chart-wrap">
+        <canvas id="revenueChart" class="dd-chart"></canvas>
+      </div>
+    </div>` : ''}
+
+    <!-- Dividends -->
+    ${d.dividend_yield ? `
+    <div class="dd-section">
+      <div class="dd-section-title">Dividends</div>
+      <div class="dd-stats">
+        ${stat('Yield',       fmtPct(d.dividend_yield), 'green')}
+        ${stat('Annual Rate', fmtVal(d.dividend_rate,'$'))}
+        ${stat('Payout Ratio',fmtPct(d.payout_ratio))}
+        ${stat('Ex-Div Date', d.ex_div_date || '--')}
+      </div>
+    </div>` : ''}
+
+    <!-- Analyst consensus -->
+    <div class="dd-section">
+      <div class="dd-section-title">Analyst Consensus</div>
+      <div class="dd-stats" style="margin-bottom:14px;">
+        ${stat('Mean Target',  fmtVal(d.analyst_target,'$'))}
+        ${stat('Low Target',   fmtVal(d.analyst_low,'$'))}
+        ${stat('High Target',  fmtVal(d.analyst_high,'$'))}
+        ${stat('Upside',       upside ? (upside >= 0 ? '+' : '') + upside + '%' : '--', upside ? colorClass(parseFloat(upside)) : '')}
+        ${stat('Rating',       d.analyst_key ? d.analyst_key.replace(/_/g,' ').toUpperCase() : '--')}
+        ${stat('# Analysts',   fmtVal(d.num_analysts))}
+      </div>
+      ${abTotal > 0 ? `
+      <div class="dd-analyst-bars">
+        ${barRow('Strong Buy',  ab.strong_buy||0,  'var(--green)')}
+        ${barRow('Buy',         ab.buy||0,         '#34d399')}
+        ${barRow('Hold',        ab.hold||0,        'var(--amber)')}
+        ${barRow('Sell',        ab.sell||0,        '#f87171')}
+        ${barRow('Strong Sell', ab.strong_sell||0, 'var(--red)')}
+      </div>` : '<div style="color:var(--muted);font-size:0.78rem;">No analyst breakdown available.</div>'}
+    </div>
+
+    <!-- News -->
+    <div class="dd-section">
+      <div class="dd-section-title">Recent News</div>
+      <div class="dd-news">${newsHtml}</div>
+    </div>
+
+    <div style="text-align:center;padding:10px 0 4px;">
+      <a href="https://finance.yahoo.com/quote/${d.ticker}" target="_blank"
+         style="font-size:0.72rem;color:var(--accent);text-decoration:none;">
+        View ${d.ticker} on Yahoo Finance ↗
+      </a>
+    </div>
+  `;
+
+  // ── Draw charts ──────────────────────────────────────────────────────
+  const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#71717a', font: { size: 10 }, maxTicksLimit: 8 },
+           grid:  { color: '#27272a' } },
+      y: { ticks: { color: '#71717a', font: { size: 10 } },
+           grid:  { color: '#27272a' } },
+    }
+  };
+
+  // Price chart
+  if (d.price_history && d.price_history.length) {
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    priceChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: d.price_history.map(p => p.date),
+        datasets: [{ data: d.price_history.map(p => p.close),
+          borderColor: '#22d3ee', backgroundColor: 'rgba(34,211,238,.08)',
+          fill: true, tension: 0.3, pointRadius: 0, borderWidth: 2 }]
+      },
+      options: { ...chartDefaults,
+        plugins: { ...chartDefaults.plugins,
+          tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y.toFixed(2) } } } }
+    });
+  }
+
+  // Earnings chart
+  if (d.quarterly_earnings && d.quarterly_earnings.length) {
+    const ctx = document.getElementById('earningsChart').getContext('2d');
+    earningsChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: d.quarterly_earnings.map(e => e.quarter),
+        datasets: [
+          { label: 'Actual',   data: d.quarterly_earnings.map(e => e.actual),
+            backgroundColor: '#22d3ee', borderRadius: 4 },
+          { label: 'Estimate', data: d.quarterly_earnings.map(e => e.estimate),
+            backgroundColor: '#3f3f46', borderRadius: 4 }
+        ]
+      },
+      options: { ...chartDefaults,
+        plugins: { legend: { display: true,
+          labels: { color: '#71717a', font: { size: 11 } } } } }
+    });
+  }
+
+  // Revenue chart
+  if (d.quarterly_revenue && d.quarterly_revenue.length) {
+    const ctx2 = document.getElementById('revenueChart');
+    if (ctx2) {
+      revenueChart = new Chart(ctx2.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: d.quarterly_revenue.map(r => r.quarter),
+          datasets: [{ label: 'Revenue ($B)',
+            data: d.quarterly_revenue.map(r => r.revenue),
+            backgroundColor: '#10b981', borderRadius: 4 }]
+        },
+        options: { ...chartDefaults,
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: ctx => '$' + ctx.parsed.y + 'B' } } } }
+      });
+    }
+  }
+}
+
+// Close on Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDeepDive();
+});
+</script>
+
 </body>
 </html>
