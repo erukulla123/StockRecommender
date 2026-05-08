@@ -694,6 +694,14 @@
   <div class="header">
     <div class="logo">Stock<span>Recommender</span></div>
     <div class="header-badge"><div class="dot"></div> Live Market Data</div>
+    <a href="/backtest" style="font-size:0.72rem;font-family:'IBM Plex Mono',monospace;
+       letter-spacing:0.08em;text-transform:uppercase;color:var(--accent);
+       background:rgba(34,211,238,.06);border:1px solid rgba(34,211,238,.2);
+       border-radius:6px;padding:5px 12px;text-decoration:none;transition:all .15s;"
+       onmouseover="this.style.background='rgba(34,211,238,.12)'"
+       onmouseout="this.style.background='rgba(34,211,238,.06)'">
+      Backtest
+    </a>
     <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       {% if user_plan == 'pro' %}
         <span style="font-size:0.62rem;font-family:'IBM Plex Mono',monospace;font-weight:600;

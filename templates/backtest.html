@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Backtesting — StockRecommender</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #09090b; --surface: #111113; --surface2: #18181b;
+    --border: #27272a; --border2: #3f3f46;
+    --accent: #22d3ee; --green: #10b981; --amber: #f59e0b;
+    --red: #ef4444; --text: #fafafa; --muted: #71717a;
+    --radius: 12px; --radius-sm: 8px;
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+  .header {
+    padding: 18px 28px; display: flex; align-items: center; gap: 16px;
+    border-bottom: 1px solid var(--border); background: rgba(9,9,11,.9);
+    position: sticky; top: 0; z-index: 10; flex-wrap: wrap;
+  }
+  .logo { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--accent); text-decoration: none; }
+  .logo span { color: #71717a; }
+  .page-title { font-size: 0.78rem; color: var(--muted); border-left: 1px solid var(--border); padding-left: 16px; }
+  .back-link { margin-left: auto; font-size: 0.78rem; color: var(--muted); text-decoration: none; }
+  .back-link:hover { color: var(--accent); }
+  .main { max-width: 1000px; margin: 0 auto; padding: 28px 20px 80px; }
+
+  /* Controls */
+  .controls-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 24px; margin-bottom: 24px;
+  }
+  .controls-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 18px 20px; margin-bottom: 20px;
+  }
+  .ctrl-group { display: flex; flex-direction: column; gap: 6px; }
+  .ctrl-label { font-size: 0.72rem; font-weight: 500; color: var(--text); }
+  .ctrl-hint  { font-size: 0.62rem; color: var(--muted); }
+  .ctrl-val   { font-family: 'IBM Plex Mono', monospace; font-size: 0.82rem; color: var(--accent); text-align: right; }
+  .ctrl-header { display: flex; justify-content: space-between; align-items: baseline; }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 4px;
+    border-radius: 2px; background: var(--border2); outline: none; cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); border: 2px solid var(--bg);
+    box-shadow: 0 0 0 2px rgba(34,211,238,.3); cursor: pointer;
+  }
+  .btn-run {
+    width: 100%; padding: 13px; background: var(--accent); color: #000;
+    border: none; border-radius: var(--radius-sm); font-family: 'DM Sans', sans-serif;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer; transition: all .2s;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-run:hover:not(:disabled) { background: #67e8f9; transform: translateY(-1px); }
+  .btn-run:disabled { opacity: .5; cursor: not-allowed; transform: none; }
+
+  /* Progress */
+  .progress-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 22px; margin-bottom: 22px; display: none;
+  }
+  .progress-card.show { display: block; }
+  .prog-bar-wrap { background: var(--border); border-radius: 4px; height: 4px; overflow: hidden; margin: 10px 0 6px; }
+  .prog-bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s ease; width: 0%; }
+  .prog-msg { font-size: 0.72rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+
+  /* Summary stats */
+  .section-label {
+    font-size: 0.62rem; font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: .12em; text-transform: uppercase; color: var(--muted);
+    margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px; margin-bottom: 20px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-sm); padding: 12px 14px; text-align: center;
+  }
+  .stat-card .num {
+    font-family: 'DM Serif Display', serif; font-size: 1.5rem; line-height: 1;
+    margin-bottom: 3px;
+  }
+  .stat-card .lbl { font-size: 0.6rem; font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+  .green { color: var(--green); }
+  .red   { color: var(--red); }
+  .amber { color: var(--amber); }
+  .accent { color: var(--accent); }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+  .tab-btn {
+    flex: 1; padding: 10px; border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface2);
+    color: var(--muted); font-family: 'DM Sans', sans-serif; font-size: 0.85rem;
+    font-weight: 500; cursor: pointer; transition: all .2s;
+  }
+  .tab-btn.active-buy  { border-color: var(--green); background: rgba(16,185,129,.1); color: var(--green); }
+  .tab-btn.active-sell { border-color: var(--red);   background: rgba(239,68,68,.1);  color: var(--red); }
+
+  /* Chart */
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 20px; margin-bottom: 18px;
+  }
+  .chart-wrap { position: relative; width: 100%; height: 220px; }
+
+  /* Picks table */
+  .picks-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 20px; }
+  @media(max-width:600px) { .picks-grid { grid-template-columns: 1fr; } }
+  .picks-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .picks-title { font-size: 0.65rem; font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .pick-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 0.8rem;
+  }
+  .pick-row:last-child { border-bottom: none; }
+  .pick-ticker { font-family: 'IBM Plex Mono', monospace; font-weight: 500; color: var(--accent); }
+  .pick-date   { font-size: 0.68rem; color: var(--muted); }
+
+  /* Disclaimer */
+  .disclaimer {
+    background: rgba(245,158,11,.06); border: 1px solid rgba(245,158,11,.15);
+    border-radius: var(--radius-sm); padding: 12px 16px;
+    font-size: 0.72rem; color: #a16207; line-height: 1.6; margin-bottom: 20px;
+  }
+  .empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <a href="/" class="logo" style="text-decoration:none;">Stock<span>Recommender</span></a>
+  <span class="page-title">Signal Backtester</span>
+  <a href="/" class="back-link">← Back to screener</a>
+</div>
+
+<div class="main">
+
+  <!-- Controls -->
+  <div class="controls-card">
+    <div class="controls-grid">
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Lookback period</span>
+          <span class="ctrl-val" id="val-lookback">24 months</span>
+        </div>
+        <input type="range" id="sl-lookback" min="6" max="36" step="6" value="24"
+               oninput="document.getElementById('val-lookback').textContent=this.value+' months'">
+        <span class="ctrl-hint">How far back to test signals</span>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Hold period</span>
+          <span class="ctrl-val" id="val-hold">30 days</span>
+        </div>
+        <input type="range" id="sl-hold" min="10" max="90" step="10" value="30"
+               oninput="document.getElementById('val-hold').textContent=this.value+' days'">
+        <span class="ctrl-hint">Days to hold after signal</span>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Max P/E for BUY</span>
+          <span class="ctrl-val" id="val-pe">20x</span>
+        </div>
+        <input type="range" id="sl-pe" min="10" max="40" step="1" value="20"
+               oninput="document.getElementById('val-pe').textContent=this.value+'x'">
+        <span class="ctrl-hint">P/E threshold for BUY signals</span>
+      </div>
+    </div>
+    <button class="btn-run" id="run-btn" onclick="runBacktest()">
+      <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+        <path d="M3 2l10 5.5L3 13V2z" fill="currentColor"/>
+      </svg>
+      Run Backtest
+    </button>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-card" id="progress-card">
+    <div class="section-label" style="margin-bottom:8px">Running backtest</div>
+    <div class="prog-bar-wrap">
+      <div class="prog-bar-fill" id="prog-fill"></div>
+    </div>
+    <div class="prog-msg" id="prog-msg">Initialising...</div>
+  </div>
+
+  <!-- Results -->
+  <div id="results" style="display:none">
+
+    <div class="disclaimer">
+      <strong>Backtest disclaimer:</strong> Results use current financial ratios applied to historical prices.
+      They do not account for look-ahead bias, transaction costs, slippage, or taxes.
+      Past signal performance does not guarantee future results. For educational purposes only.
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active-buy" id="tab-buy" onclick="switchTab('buy')">
+        BUY Signals <span id="tab-buy-n"></span>
+      </button>
+      <button class="tab-btn" id="tab-sell" onclick="switchTab('sell')">
+        SELL Signals <span id="tab-sell-n"></span>
+      </button>
+    </div>
+
+    <!-- BUY panel -->
+    <div id="panel-buy">
+      <div class="stats-grid" id="buy-stats"></div>
+      <div class="chart-card">
+        <div class="section-label">Average monthly return — BUY signals</div>
+        <div class="chart-wrap"><canvas id="buyChart" role="img" aria-label="Monthly BUY signal returns chart"></canvas></div>
+      </div>
+      <div class="picks-grid">
+        <div class="picks-card">
+          <div class="picks-title">Top 5 best BUY picks</div>
+          <div id="buy-best"></div>
+        </div>
+        <div class="picks-card">
+          <div class="picks-title">Top 5 worst BUY picks</div>
+          <div id="buy-worst"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SELL panel -->
+    <div id="panel-sell" style="display:none">
+      <div class="stats-grid" id="sell-stats"></div>
+      <div class="chart-card">
+        <div class="section-label">Average monthly return after SELL signal (lower = signal worked better)</div>
+        <div class="chart-wrap"><canvas id="sellChart" role="img" aria-label="Monthly SELL signal returns chart"></canvas></div>
+      </div>
+      <div class="picks-grid">
+        <div class="picks-card">
+          <div class="picks-title">Top 5 stocks that fell most (signal correct)</div>
+          <div id="sell-best"></div>
+        </div>
+        <div class="picks-card">
+          <div class="picks-title">Top 5 stocks that rose most (signal wrong)</div>
+          <div id="sell-worst"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="empty" id="empty" style="display:none">
+    <p id="empty-msg">No results yet. Configure and run the backtest above.</p>
+  </div>
+
+</div>
+
+<script>
+let buyChart = null, sellChart = null;
+let activeTab = 'buy';
+
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-buy').className  = 'tab-btn' + (tab==='buy'  ? ' active-buy'  : '');
+  document.getElementById('tab-sell').className = 'tab-btn' + (tab==='sell' ? ' active-sell' : '');
+  document.getElementById('panel-buy').style.display  = tab==='buy'  ? 'block' : 'none';
+  document.getElementById('panel-sell').style.display = tab==='sell' ? 'block' : 'none';
+}
+
+function col(v, goodIfPositive=true) {
+  if (v===null||v===undefined) return '';
+  return (goodIfPositive ? v>=0 : v<=0) ? 'green' : 'red';
+}
+
+function statCard(num, lbl, cls='accent') {
+  return '<div class="stat-card"><div class="num ' + cls + '">' + (num??'--') +
+         '</div><div class="lbl">' + lbl + '</div></div>';
+}
+
+function pickRows(picks, mode) {
+  if (!picks || !picks.length) return '<div style="color:var(--muted);font-size:.78rem;padding:8px 0">No data.</div>';
+  return picks.map(p => {
+    const ret = p.return_pct;
+    const cls = mode==='best' ? (ret>=0?'green':'red') : (ret<=0?'green':'red');
+    return '<div class="pick-row">' +
+      '<div><span class="pick-ticker">' + p.ticker + '</span>' +
+      '<div class="pick-date">' + p.date + '</div></div>' +
+      '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:.82rem;" class="' + cls + '">' +
+      (ret>=0?'+':'') + ret + '%</span></div>';
+  }).join('');
+}
+
+function renderSummary(data, type) {
+  const s = data[type];
+  if (!s) {
+    document.getElementById(type+'-stats').innerHTML =
+      '<p style="color:var(--muted);font-size:.8rem">No '+type+' signals found in this period.</p>';
+    return null;
+  }
+
+  const isBuy  = type === 'buy';
+  const avRet  = s.avg_return;
+  const avSpy  = s.avg_spy_return;
+  const alpha  = (avRet !== null && avSpy !== null) ? (avRet - avSpy).toFixed(2) : null;
+
+  document.getElementById(type+'-stats').innerHTML =
+    statCard(s.total_signals, 'Total signals', 'accent') +
+    statCard(s.win_rate+'%', isBuy ? 'Win rate' : 'Correct rate', col(s.win_rate-50)) +
+    statCard((avRet>=0?'+':'')+avRet+'%', 'Avg '+s.hold_days+'d return', col(avRet, isBuy)) +
+    statCard(s.median_return+'%', 'Median return', col(s.median_return, isBuy)) +
+    statCard((avSpy!==null?(avSpy>=0?'+':'')+avSpy+'%':'--'), 'Avg SPY return', 'muted') +
+    statCard((alpha!==null?(parseFloat(alpha)>=0?'+':'')+alpha+'%':'--'), 'Alpha vs SPY', col(parseFloat(alpha), isBuy)) +
+    statCard(s.outperform_rate!==null?s.outperform_rate+'%':'--', 'Outperform SPY', col(s.outperform_rate-50)) +
+    statCard((isBuy?'+':'')+s.best_return+'%', isBuy?'Best pick':'Biggest drop', 'green');
+
+  document.getElementById(type+(isBuy?'-best':'-best')).innerHTML = pickRows(s.top_picks, 'best');
+  document.getElementById(type+(isBuy?'-worst':'-worst')).innerHTML = pickRows(s.worst_picks, 'worst');
+
+  return s.monthly_series;
+}
+
+function drawChart(canvasId, series, chartRef, color, label) {
+  if (chartRef) chartRef.destroy();
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  return new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: series.map(s => s.month),
+      datasets: [{
+        label: label,
+        data:  series.map(s => s.avg_return),
+        backgroundColor: series.map(s => s.avg_return >= 0 ? color : '#ef4444'),
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => (ctx.parsed.y>=0?'+':'')+ctx.parsed.y.toFixed(2)+'%' } }
+      },
+      scales: {
+        x: { ticks: { color:'#71717a', font:{size:10}, maxRotation:45 }, grid:{color:'#27272a'} },
+        y: { ticks: { color:'#71717a', font:{size:10},
+                      callback: v => (v>=0?'+':'')+v+'%' }, grid:{color:'#27272a'} }
+      }
+    }
+  });
+}
+
+async function runBacktest() {
+  const btn = document.getElementById('run-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" style="animation:spin .8s linear infinite"><circle cx="7" cy="7" r="5.5" stroke="currentColor" stroke-width="1.5" stroke-dasharray="10 6"/></svg> Running...';
+
+  document.getElementById('progress-card').classList.add('show');
+  document.getElementById('results').style.display = 'none';
+  document.getElementById('empty').style.display   = 'none';
+
+  const params = {
+    lookback_months: parseInt(document.getElementById('sl-lookback').value),
+    hold_days:       parseInt(document.getElementById('sl-hold').value),
+    max_pe:          parseFloat(document.getElementById('sl-pe').value),
+  };
+
+  let jobId;
+  try {
+    const res = await fetch('/start_backtest', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(params)
+    });
+    jobId = (await res.json()).job_id;
+  } catch(e) {
+    document.getElementById('prog-msg').textContent = 'Failed to start: ' + e.message;
+    btn.disabled = false; btn.innerHTML = 'Run Backtest'; return;
+  }
+
+  const poll = setInterval(async () => {
+    try {
+      const data = await (await fetch('/poll_backtest/' + jobId)).json();
+      document.getElementById('prog-fill').style.width = (data.pct||0) + '%';
+      document.getElementById('prog-msg').textContent  = data.msg || '';
+
+      if (data.status === 'done') {
+        clearInterval(poll);
+        document.getElementById('progress-card').classList.remove('show');
+        const d = data.result;
+
+        if (!d.buy && !d.sell) {
+          document.getElementById('empty').style.display = 'block';
+          document.getElementById('empty-msg').textContent = 'No signals found. Try a longer lookback period.';
+        } else {
+          const buySeries  = renderSummary(d, 'buy');
+          const sellSeries = renderSummary(d, 'sell');
+          if (buySeries  && buySeries.length)  buyChart  = drawChart('buyChart',  buySeries,  buyChart,  '#10b981', 'Avg Return');
+          if (sellSeries && sellSeries.length) sellChart = drawChart('sellChart', sellSeries, sellChart, '#22d3ee', 'Avg Return');
+
+          const buyN  = d.buy  ? d.buy.total_signals  : 0;
+          const sellN = d.sell ? d.sell.total_signals : 0;
+          document.getElementById('tab-buy-n').textContent  = buyN  ? '(' + buyN  + ')' : '';
+          document.getElementById('tab-sell-n').textContent = sellN ? '(' + sellN + ')' : '';
+          document.getElementById('results').style.display = 'block';
+          switchTab('buy');
+        }
+        btn.disabled = false;
+        btn.innerHTML = '<svg width="15" height="15" viewBox="0 0 15 15" fill="none"><path d="M3 2l10 5.5L3 13V2z" fill="currentColor"/></svg> Run Backtest';
+      }
+
+      if (data.status === 'error') {
+        clearInterval(poll);
+        document.getElementById('prog-msg').textContent = 'Error: ' + data.msg;
+        document.getElementById('progress-card').classList.remove('show');
+        document.getElementById('empty').style.display = 'block';
+        document.getElementById('empty-msg').textContent = 'Error: ' + data.msg;
+        btn.disabled = false; btn.innerHTML = 'Run Backtest';
+      }
+    } catch(e) {
+      clearInterval(poll);
+      document.getElementById('prog-msg').textContent = 'Connection lost. Try again.';
+      btn.disabled = false; btn.innerHTML = 'Run Backtest';
+    }
+  }, 3000);
+}
+
+const style = document.createElement('style');
+style.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+document.head.appendChild(style);
+</script>
+</body>
+</html>
